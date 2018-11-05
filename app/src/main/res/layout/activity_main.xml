@@ -100,7 +100,6 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="16">
-
             <FrameLayout
                 android:id="@+id/MAIN_FL_BOT"
                 android:layout_width="match_parent"
@@ -108,6 +107,18 @@
                 android:layout_weight="8"
                 android:orientation="vertical">
                 >
+
+                <LinearLayout
+                    xmlns:android="http://schemas.android.com/apk/res/android"
+                    android:id="@+id/MAIN_BOT_FIR"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical">
+                    <com.example.caucse.alonehealth.CustomViewPager
+                        android:id="@+id/pager"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"></com.example.caucse.alonehealth.CustomViewPager>
+                </LinearLayout>
             </FrameLayout>
         </LinearLayout>
 

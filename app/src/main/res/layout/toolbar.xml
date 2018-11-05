@@ -11,16 +11,15 @@
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize">
 
-        <ImageButton
+        <Button
             android:id="@+id/home_button"
             android:layout_width="45dp"
             android:layout_height="45dp"
             android:layout_gravity="left"
             android:layout_marginLeft="15dp"
+            android:background="@drawable/homebutton"
             android:padding="0dp"
-            android:scaleType="centerInside"
-            android:src="@drawable/homebutton" />
-
+            android:scaleType="centerInside" />
 
         <ImageView
             android:id="@+id/logo"
@@ -28,18 +27,17 @@
             android:layout_height="45dp"
             android:layout_gravity="center"
             android:padding="0dp"
-            android:scaleType="centerInside"
-            android:src="@drawable/logo" />
+            android:scaleType="centerInside" />
 
-        <ImageButton
+        <Button
             android:id="@+id/Schedule_button"
             android:layout_width="45dp"
             android:layout_height="45dp"
             android:layout_gravity="right"
             android:layout_marginRight="15dp"
+            android:background="@drawable/schedulebutton"
             android:padding="0dp"
-            android:scaleType="fitCenter"
-            android:src="@drawable/schedulebutton" />
+            android:scaleType="fitCenter" />
 
     </android.support.v7.widget.Toolbar>
 

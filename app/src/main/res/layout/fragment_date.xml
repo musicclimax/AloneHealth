@@ -6,21 +6,27 @@
     android:layout_height="match_parent"
     android:background="@drawable/border"
     android:orientation="vertical">
-
-
+<FrameLayout
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    >
     <TextView
-        android:id="@+id/dateView_Cal"
+        android:id="@+id/fragment_date"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="left"
         android:text=""
         android:textSize="20dp"
         android:layout_marginLeft="10dp"
-        android:textStyle="bold"/>
+        android:textStyle="bold" />
 
-    <ListView
-        android:id="@+id/listView_Cal"
+    <TextView
+        android:id="@+id/fragment_day"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:text=""
+        android:textSize="60dp"
+        android:textStyle="bold" />
+</FrameLayout>
 </LinearLayout>
