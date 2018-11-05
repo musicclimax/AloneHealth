@@ -78,7 +78,7 @@ class ScheduleData{
     public String getDate(){return this.date;}
     public int getSet(){return this.set;}
     public int getNumber(){return this.number;}
-    public boolean getIsDone(){return this.isDone;}
+    public int getIsDone(){if(isDone) return 1; else return 0;}
 
     public void setId(String id){this.id = id;}
     public void setDate(String date){this.date = date;}
@@ -178,8 +178,8 @@ public class SQLiteManager extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        db.execSQL("create table " + EXERCISE_TABLE_NAME + " ("
-                + EXERCISE_ID + " TEXT PRIMARY KEY AUTOINCREMENT, "
+        db.execSQL("create table if not exists " + EXERCISE_TABLE_NAME + " ("
+                + EXERCISE_ID + " TEXT PRIMARY KEY, "
                 + EXERCISE_NAME + " TEXT, "
                 + EXERCISE_CHEST + " INTEGER, "
                 + EXERCISE_ARM + " INTEGER, "
@@ -188,16 +188,16 @@ public class SQLiteManager extends SQLiteOpenHelper {
                 + EXERCISE_BACK + " INTEGER, "
                 + EXERCISE_LEG + " INTEGER"
                 + ")");
-        db.execSQL("create table " + SCHEDULE_TABLE_NAME + " ("
-                + SCHEDULE_ID + " TEXT PRIMARY KEY AUTOINCREMENT, "
+        db.execSQL("create table if not exists " + SCHEDULE_TABLE_NAME + " ("
+                + SCHEDULE_ID + " TEXT PRIMARY KEY, "
                 + SCHEDULE_DATE + " TEXT, "
                 + SCHEDULE_EXERCISE_ID + " TEXT, "
                 + SCHEDULE_SET + " INTEGER, "
                 + SCHEDULE_NUMBER + " INTEGER, "
                 + SCHEDULE_ISDONE + " INTEGER"
                 + ")");
-        db.execSQL("create table " + CHARACTER_TABLE_NAME + " ("
-                + CHARACTER_DATE + " TEXT PRIMARY KEY AUTOINCREMENT, "
+        db.execSQL("create table if not exists " + CHARACTER_TABLE_NAME + " ("
+                + CHARACTER_DATE + " TEXT PRIMARY KEY , "
                 + CHARACTER_CHEST + " INTEGER, "
                 + CHARACTER_ARM + " INTEGER, "
                 + CHARACTER_ABS + " INTEGER, "
@@ -205,6 +205,9 @@ public class SQLiteManager extends SQLiteOpenHelper {
                 + CHARACTER_BACK + " INTEGER, "
                 + CHARACTER_LEG + " INTEGER"
                 + ")");
+
+
+
     }
 
     @Override
@@ -214,7 +217,23 @@ public class SQLiteManager extends SQLiteOpenHelper {
         db.execSQL("DROP TABLE IF EXISTS " + CHARACTER_TABLE_NAME);
         onCreate(db);
     }
-
+    /**DB 초기화*/
+    public boolean init(){
+        ArrayList<String> exercises;
+        if(sqLiteManager != null){
+            exercises = selectAllExerciseName();
+            if(exercises.size() > 0)
+                return false;
+            else{
+                sqLiteManager.insertExerciseData(new ExerciseData("EX4","스쿼트",0,0,2,0,0,4));
+                sqLiteManager.insertExerciseData(new ExerciseData("EX3","풀업",0,3,0,3,3,0));
+                sqLiteManager.insertExerciseData(new ExerciseData("EX2","윗몸일으키기",0,0,4,0,0,1));
+                sqLiteManager.insertExerciseData(new ExerciseData("EX1","팔굽혀펴기",3,3,0,3,2,0));
+                return true;
+            }
+        }
+        else return false;
+    }
     /**데이터 Insert**/
     //Exercise Data insert
     public boolean insertExerciseData(ExerciseData data){
@@ -339,7 +358,7 @@ public class SQLiteManager extends SQLiteOpenHelper {
     // Exercise 전체 조회
     public List<ExerciseData> selectAll(){
         List<ExerciseData> dataResultList = new ArrayList<ExerciseData>();
-        String sql = "select * from "+EXERCISE_TABLE_NAME+" ORDER BY "+EXERCISE_ID+" DESC;";
+        String sql = "select * from "+EXERCISE_TABLE_NAME+" ORDER BY "+EXERCISE_ID+" ASC;";
         Cursor results = db.rawQuery(sql, null);
 
         if(results.moveToFirst()){
@@ -349,6 +368,55 @@ public class SQLiteManager extends SQLiteOpenHelper {
                         results.getInt(3),results.getInt(4),results.getInt(5),      // Chest, Arm, Abs
                         results.getInt(6),results.getInt(7),results.getInt(8));     // Shoulder, Back, Leg
                 dataResultList.add(exerciseData);
+            }while(results.moveToNext());
+        }
+        return dataResultList;
+    }
+    public ArrayList<String> selectAllExerciseName(){
+        ArrayList<String> dataResultList = new ArrayList<String>();
+        String sql = "select "+EXERCISE_NAME+" from "+EXERCISE_TABLE_NAME+" ORDER BY "+EXERCISE_ID+" DESC;";
+        Cursor results = db.rawQuery(sql, null);
+
+        if(results.moveToFirst()){
+            do{
+                String exerciseData = results.getString(results.getColumnIndex(EXERCISE_NAME));
+                dataResultList.add(exerciseData);
+            }while(results.moveToNext());
+        }
+        return dataResultList;
+    }
+    //Exercise의 id로 부터 이름 조회
+    public String selectExerciseNameFromId(String exerciseId){
+        String dataResult = new String();
+        String sql = "select " + EXERCISE_NAME + " from " + EXERCISE_TABLE_NAME+" where " + EXERCISE_ID + " = \'" + exerciseId+"\' ;";
+        Cursor result = db.rawQuery(sql,null);
+        if(result.moveToFirst()){
+            dataResult = result.getString(0);
+        }
+        return dataResult;
+    }
+    //Exercise의 이름으로 부터 id조회
+    public String selectExerciseIdFromName(String exerciseName){
+        String dataResult = new String();
+        String sql = "select " + EXERCISE_ID + " from " + EXERCISE_TABLE_NAME+" where " + EXERCISE_NAME + " = \'" + exerciseName+"\' ;";
+        Cursor result = db.rawQuery(sql,null);
+        if(result.moveToFirst()){
+            dataResult = result.getString(0);
+        }
+        return dataResult;
+    }
+    //날짜로 스케줄 조회
+    public ArrayList<ScheduleData> selectScheduleFromDate(String date){
+        ArrayList<ScheduleData> dataResultList = new ArrayList<ScheduleData>();
+        String sql = "select * from "+SCHEDULE_TABLE_NAME+" where "+ SCHEDULE_DATE + " = \'" + date + "\';";
+        Cursor results = db.rawQuery(sql,null);
+
+        if(results.moveToFirst()){
+            do{
+                ScheduleData scheduleData
+                        = new ScheduleData(results.getString(0), results.getString(1), results.getString(2), // ID, Date, Exercise_ID
+                        results.getInt(3),results.getInt(4),results.getInt(5));
+                dataResultList.add(scheduleData);
             }while(results.moveToNext());
         }
         return dataResultList;

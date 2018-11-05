@@ -7,11 +7,14 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 
 public class SplashActivity extends AppCompatActivity {
+    SQLiteManager sqLiteManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash);
+        sqLiteManager = SQLiteManager.getInstance(this);
+        sqLiteManager.init();
         Handler hd = new Handler();
         hd.postDelayed(new splashhandler(), 3000);  //3초
 
