@@ -9,10 +9,13 @@ import android.widget.BaseAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import org.w3c.dom.Text;
+
 import java.util.ArrayList;
+import java.util.List;
 
 public class ExerciseListViewAdapter extends BaseAdapter {
-    private ArrayList<ExerciseListViewItem> listViewItemList = new ArrayList<ExerciseListViewItem>() ;
+    private ArrayList<ScheduleData> listViewItemList = new ArrayList<ScheduleData>() ;
 
     public ExerciseListViewAdapter() {
 
@@ -37,17 +40,19 @@ public class ExerciseListViewAdapter extends BaseAdapter {
         }
 
         // 화면에 표시될 View(Layout이 inflate된)으로부터 위젯에 대한 참조 획득
-        ImageView iconImageView = (ImageView) convertView.findViewById(R.id.exerciseImage) ;
-        TextView titleTextView = (TextView) convertView.findViewById(R.id.exerciseName) ;
-        TextView descTextView = (TextView) convertView.findViewById(R.id.numberOfSet) ;
+        TextView exerciseNameTextView = (TextView) convertView.findViewById(R.id.exerciseName) ;
+        TextView exerciseSetTextView = (TextView) convertView.findViewById(R.id.exerciseSet) ;
+        TextView exerciseNumberTextView = (TextView) convertView.findViewById(R.id.exerciseNumber) ;
 
         // Data Set(listViewItemList)에서 position에 위치한 데이터 참조 획득
-        ExerciseListViewItem listViewItem = listViewItemList.get(position);
+        ScheduleData listViewItem = listViewItemList.get(position);
 
         // 아이템 내 각 위젯에 데이터 반영
-        iconImageView.setImageDrawable(listViewItem.getGifDrawable());
-        titleTextView.setText(listViewItem.getExerciseName());
-        descTextView.setText(listViewItem.getNumberOfSets());
+        exerciseNameTextView.setText(SQLiteManager.sqLiteManager.selectExerciseNameFromId(listViewItem.getExercise_id()));
+        exerciseSetTextView.setText(String.valueOf(listViewItem.getSet()) + " SET");
+        exerciseNumberTextView.setText(String.valueOf(listViewItem.getNumber()) + " 회");
+
+
 
         return convertView;
     }
@@ -58,21 +63,22 @@ public class ExerciseListViewAdapter extends BaseAdapter {
         return position ;
     }
 
-    // 지정한 위치(position)에 있는 데이터 리턴 : 필수 구현
+    // 지정한 위치(position)에 있는 데이터 리턴
     @Override
     public Object getItem(int position) {
         return listViewItemList.get(position) ;
     }
 
-    // 아이템 데이터 추가를 위한 함수. 개발자가 원하는대로 작성 가능.
-    public void addItem(Drawable icon, String title, String sets) {
-        ExerciseListViewItem item = new ExerciseListViewItem();
-
-        item.setGifDrawable(icon);
-        item.setExerciseName(title);
-        item.setNumberOfSets(sets);
-
-        listViewItemList.add(item);
+    // 지정한 위치에 있는 아이템 삭제
+    public void delete(int position){
+        listViewItemList.remove(position);
     }
+    // 아이템 데이터 추가를 위한 함수.
+    public void setListViewItemList(ArrayList<ScheduleData> itemList) {
+       if(itemList != null)
+           listViewItemList = itemList;
+    }
+
+
 
 }

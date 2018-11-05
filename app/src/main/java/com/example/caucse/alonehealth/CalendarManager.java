@@ -7,22 +7,33 @@ import android.graphics.Color;
 import android.os.AsyncTask;
 import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.Gravity;
+import android.view.LayoutInflater;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.WindowManager;
+import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 import com.prolificinteractive.materialcalendarview.CalendarDay;
 import com.prolificinteractive.materialcalendarview.CalendarMode;
 import com.prolificinteractive.materialcalendarview.MaterialCalendarView;
 import com.prolificinteractive.materialcalendarview.OnDateSelectedListener;
-import com.prolificinteractive.materialcalendarview.format.DateFormatTitleFormatter;
-import com.prolificinteractive.materialcalendarview.format.MonthArrayTitleFormatter;
 import com.prolificinteractive.materialcalendarview.format.TitleFormatter;
 
-import java.sql.Date;
+import org.w3c.dom.Text;
+
+import java.util.Date;
 import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -41,13 +52,42 @@ public class CalendarManager extends AppCompatActivity {
     MaterialCalendarView materialCalendarView;
     ListView listView;
     ExerciseListViewAdapter adapter;
-
+    Button addExerciseButton;
+    AddExerciseDialog addExerciseDialog;
+    TextView currentDateTextView;
+    Date selectedDate;
+    SimpleDateFormat simpleDateFormat;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_calendar);
+        /**초기 세팅*/
+        simpleDateFormat = new SimpleDateFormat("yyyy. MM. dd");
+        //schedule list view adapter
+        adapter = new ExerciseListViewAdapter();
+        listView = (ListView)findViewById(R.id.listView);
+        listView.setAdapter(adapter);
+
+        /**운동 추가 다이얼로그 창 설정*/
+        addExerciseDialog = new AddExerciseDialog(this,adapter);
+        addExerciseDialog.getWindow().setGravity(Gravity.BOTTOM);
+
+        /////////////////////////////////////////////////////////////////////
+        /**운동 추가 버튼**/
+        addExerciseButton = findViewById(R.id.add_exercise_button);
 
 
+        /**날짜 최신화*/
+        currentDateTextView = (TextView)findViewById(R.id.currentDate);
+        long now = System.currentTimeMillis();
+        Date date = new Date(now);
+        addExerciseDialog.currentDate = new Date(now);
+        selectedDate = new Date(now);
+        currentDateTextView.setText(simpleDateFormat.format(date));
+        adapter.setListViewItemList(SQLiteManager.sqLiteManager.selectScheduleFromDate(simpleDateFormat.format(date)));
+        /////////////////////////////////////////////////////////////////////
+
+        ////////////////////////////////////////////////////////////////////////////
         materialCalendarView = (MaterialCalendarView)findViewById(R.id.calendarView);
         materialCalendarView.state().edit()
                 .setFirstDayOfWeek(Calendar.SUNDAY)
@@ -59,11 +99,12 @@ public class CalendarManager extends AppCompatActivity {
 
             @Override
             public CharSequence format(CalendarDay day) {
-                String format = new String(""+(day.getMonth()+1)+"월  "+day.getYear());
+                String format = new String(""+day.getYear()+"년 "+(day.getMonth()+1)+"월  ");
                 return format;
             }
         };
         materialCalendarView.setTitleFormatter(titleFormatter);
+        materialCalendarView.setTileSizeDp(44);
         materialCalendarView.setArrowColor(Color.WHITE);
         materialCalendarView.addDecorators(
                 new SundayDecorator(),
@@ -91,19 +132,47 @@ public class CalendarManager extends AppCompatActivity {
                 Log.i("shot_Day test", shot_Day + "");
                 materialCalendarView.clearSelection();
 
+                oneDayDecorator.setDate(date.getDate());
+                selectedDate = date.getDate();
+                materialCalendarView.removeDecorator(oneDayDecorator);
+                materialCalendarView.addDecorator(oneDayDecorator);
+                currentDateTextView.setText(simpleDateFormat.format(date.getDate()));
+                adapter.setListViewItemList(SQLiteManager.sqLiteManager.selectScheduleFromDate(simpleDateFormat.format(date.getDate())));
+                adapter.notifyDataSetChanged();
                 Toast.makeText(getApplicationContext(), shot_Day , Toast.LENGTH_SHORT).show();
             }
         });
         /////////////////////////////////////////////////////////////////////
-        //schedule 구성
-        adapter = new ExerciseListViewAdapter();
 
-        listView = (ListView)findViewById(R.id.listView);
-        listView.setAdapter(adapter);
+        //버튼 클릭 이미지 변경
+        addExerciseButton.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View view, MotionEvent motionEvent) {
+                int action = motionEvent.getAction();
+                if(action == MotionEvent.ACTION_DOWN){
+                    addExerciseButton.setBackgroundResource(R.drawable.addpressedbutton128);
+                }
+                else if(action == MotionEvent.ACTION_UP){
+                    addExerciseButton.setBackgroundResource(R.drawable.addbutton128);
+                    addExerciseDialog.setSelectedDate(selectedDate);
+                    addExerciseDialog.show();
+                }
+                return true;
+            }
+        });
+        /////////////////////////////////////////////////////////////////////
 
-        adapter.addItem(ContextCompat.getDrawable(this,R.drawable.juwon),"  팔굽혀펴기  ","  10회 3세트");
-        adapter.addItem(ContextCompat.getDrawable(this,R.drawable.juwon),"  윗몸일으키기","  20회 3세트");
-        adapter.addItem(ContextCompat.getDrawable(this,R.drawable.juwon),"  풀업       ","  20회 5세트");
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                adapter.delete(i);
+                adapter.notifyDataSetChanged();
+                Toast.makeText(getApplicationContext(), "i = " + i +"\n l = "+l, Toast.LENGTH_SHORT).show();
+            }
+        });
+
+
+
     }
 
     private class ApiSimulator extends AsyncTask<Void, Void, List<CalendarDay>> {
