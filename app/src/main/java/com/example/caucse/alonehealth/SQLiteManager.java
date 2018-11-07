@@ -269,6 +269,20 @@ public class SQLiteManager extends SQLiteOpenHelper {
         else
             return true;
     }
+    //Schedule Data Update
+    public boolean updateScheduleData(ScheduleData data){
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(SCHEDULE_DATE, data.getDate());
+        contentValues.put(SCHEDULE_EXERCISE_ID, data.getExercise_id());
+        contentValues.put(SCHEDULE_SET, data.getSet());
+        contentValues.put(SCHEDULE_NUMBER, data.getNumber());
+        contentValues.put(SCHEDULE_ISDONE, data.getIsDone());
+        long result = db.update(SCHEDULE_TABLE_NAME,contentValues,SCHEDULE_ID + " = " + "\'" + data.getId() + "\'",null);
+        if(result == -1)
+            return false;
+        else
+            return true;
+    }
     //Character Data insert
     public boolean insertCharacterData(CharacterStatData data){
         ContentValues contentValues = new ContentValues();
@@ -421,12 +435,12 @@ public class SQLiteManager extends SQLiteOpenHelper {
         }
         return dataResultList;
     }
-    /*
-    // DELETE
-    public int deleteRecord(){
-        int deleteRecordCnt = db.delete(TABLE_NAME, null, null);
+
+    // 스케줄 삭제
+    public int deleteScheduleRecord(String data){
+        int deleteRecordCnt = db.delete(SCHEDULE_TABLE_NAME, SCHEDULE_ID + " = " + "\'" + data + "\'", null);
 
         return deleteRecordCnt;
     }
-    */
+
 }

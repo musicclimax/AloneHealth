@@ -6,7 +6,9 @@ import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.text.InputFilter;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
@@ -35,9 +37,123 @@ public class AddExerciseDialog extends Dialog {
     EditText numberEditText;
     Date currentDate;
     Date selectedDate;
-    public AddExerciseDialog(@NonNull Context context,ExerciseListViewAdapter adapter) {
+    private String selectedItemId;
+    private boolean isForAdd;
+    //버튼 클릭 리스너 [추가, 수정]
+    View.OnClickListener addOnClickListener = new View.OnClickListener(){
+        @Override
+        public void onClick(View view) {
+            //ScheduleData 변수
+            String id;
+            String date;
+            String Exercise_id;
+            String Exercise_name;
+            int set;
+            int number;
+
+            long now = System.currentTimeMillis();
+            if(selectedDate != null){
+                if((!selectedDate.before(currentDate) || selectedDate.getDate() == currentDate.getDate())){
+                    if(setEditText.getText().toString().length()!= 0){
+                        if(numberEditText.getText().toString().length() != 0){
+                            Exercise_name = (String) dialogListView.getItemAtPosition(currentPosition);
+                            Exercise_id = SQLiteManager.sqLiteManager.selectExerciseIdFromName(Exercise_name);
+                            if(Exercise_id != null) {
+                                set = Integer.parseInt(setEditText.getText().toString());
+                                number = Integer.parseInt(numberEditText.getText().toString());
+                                SimpleDateFormat sdf = new SimpleDateFormat("yyyy. MM. dd");
+                                date = sdf.format(selectedDate);
+                                sdf = new SimpleDateFormat("hhmmss");
+                                currentDate = new Date(System.currentTimeMillis());
+                                id = new String(date.toString() + sdf.format(currentDate));
+
+                                if(SQLiteManager.sqLiteManager.insertScheduleData(new ScheduleData(id,date,Exercise_id,set,number,0))) {
+                                    Toast.makeText(getContext(), "성공적으로 추가하였습니다.", Toast.LENGTH_SHORT).show();
+                                    exerciseListViewAdapter.setListViewItemList(SQLiteManager.sqLiteManager.selectScheduleFromDate(date));
+                                    exerciseListViewAdapter.notifyDataSetChanged();
+                                }
+                                else
+                                    Toast.makeText(getContext(),"DB 삽입 잘못됨.", Toast.LENGTH_SHORT).show();
+                            }
+                            else
+                                Toast.makeText(getContext(),"운동 id 잘못됨 잘못됨.", Toast.LENGTH_SHORT).show();
+                        }
+                        else
+                            Toast.makeText(getContext(),"운동의 횟수가 입력되지 않았습니다.", Toast.LENGTH_SHORT).show();
+                    }
+                    else
+                        Toast.makeText(getContext(),"운동의 세트 수가 입력되지 않았습니다.", Toast.LENGTH_SHORT).show();
+                }
+                else
+                    Toast.makeText(getContext(),"이미 지난 날짜 입니다.", Toast.LENGTH_SHORT).show();
+            }
+            setEditText.setText("");
+            numberEditText.setText("");
+            setEditText.setHint("SET");
+            numberEditText.setHint("횟수");
+            dismiss();
+        }
+    };
+
+    View.OnClickListener editOnClickListener= new View.OnClickListener(){
+        @Override
+        public void onClick(View view) {
+            //ScheduleData 변수
+            String id;
+            String date;
+            String Exercise_id;
+            String Exercise_name;
+            int set;
+            int number;
+
+            long now = System.currentTimeMillis();
+            if(selectedDate != null){
+                if((!selectedDate.before(currentDate) || selectedDate.getDate() == currentDate.getDate())){
+                    if(setEditText.getText().toString().length()!= 0){
+                        if(numberEditText.getText().toString().length() != 0){
+                            Exercise_name = (String) dialogListView.getItemAtPosition(currentPosition);
+                            Exercise_id = SQLiteManager.sqLiteManager.selectExerciseIdFromName(Exercise_name);
+                            if(Exercise_id != null) {
+                                set = Integer.parseInt(setEditText.getText().toString());
+                                number = Integer.parseInt(numberEditText.getText().toString());
+                                SimpleDateFormat sdf = new SimpleDateFormat("yyyy. MM. dd");
+                                date = sdf.format(selectedDate);
+                                sdf = new SimpleDateFormat("hhmmss");
+                                currentDate = new Date(System.currentTimeMillis());
+                                id = selectedItemId;
+
+                                if(SQLiteManager.sqLiteManager.updateScheduleData(new ScheduleData(id,date,Exercise_id,set,number,0))) {
+                                    Toast.makeText(getContext(), "성공적으로 수정되었습니다..", Toast.LENGTH_SHORT).show();
+                                    exerciseListViewAdapter.setListViewItemList(SQLiteManager.sqLiteManager.selectScheduleFromDate(date));
+                                    exerciseListViewAdapter.notifyDataSetChanged();
+                                }
+                                else
+                                    Toast.makeText(getContext(),"DB 삽입 잘못됨.", Toast.LENGTH_SHORT).show();
+                            }
+                            else
+                                Toast.makeText(getContext(),"운동 id 잘못됨 잘못됨.", Toast.LENGTH_SHORT).show();
+                        }
+                        else
+                            Toast.makeText(getContext(),"운동의 횟수가 입력되지 않았습니다.", Toast.LENGTH_SHORT).show();
+                    }
+                    else
+                        Toast.makeText(getContext(),"운동의 세트 수가 입력되지 않았습니다.", Toast.LENGTH_SHORT).show();
+                }
+                else
+                    Toast.makeText(getContext(),"이미 지난 날짜 입니다.", Toast.LENGTH_SHORT).show();
+            }
+            setEditText.setText("");
+            numberEditText.setText("");
+            setEditText.setHint("SET");
+            numberEditText.setHint("횟수");
+            dismiss();
+        }
+    };
+
+    public AddExerciseDialog(@NonNull Context context,ExerciseListViewAdapter adapter, boolean isForAdd) {
         super(context);
         this.exerciseListViewAdapter = adapter;
+        this.isForAdd = isForAdd;
     }
 
     protected void onCreate(Bundle savedInstanceState){
@@ -87,64 +203,27 @@ public class AddExerciseDialog extends Dialog {
         });
 
         //버튼 이벤트 리스너
+        InputFilter[] filterArray = new InputFilter[1];
+        filterArray[0] = new InputFilter.LengthFilter(2);
         setEditText = (EditText)findViewById(R.id.alertSet);
+        setEditText.setFilters(filterArray);
         numberEditText = (EditText)findViewById(R.id.alertNumber);
+        numberEditText.setFilters(filterArray);
         dialogAddButton = (Button)findViewById(R.id.alertAddButton);
-        dialogAddButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                //ScheduleData 변수
-                String id;
-                String date;
-                String Exercise_id;
-                String Exercise_name;
-                int set;
-                int number;
-
-                long now = System.currentTimeMillis();
-                if(selectedDate != null){
-                    if((!selectedDate.before(currentDate) || selectedDate.getDate() == currentDate.getDate())){
-                       if(setEditText.getText().toString().length()!= 0){
-                           if(numberEditText.getText().toString().length() != 0){
-                               Exercise_name = (String) dialogListView.getItemAtPosition(currentPosition);
-                               Exercise_id = SQLiteManager.sqLiteManager.selectExerciseIdFromName(Exercise_name);
-                               if(Exercise_id != null) {
-                                   set = Integer.parseInt(setEditText.getText().toString());
-                                   number = Integer.parseInt(numberEditText.getText().toString());
-                                   SimpleDateFormat sdf = new SimpleDateFormat("yyyy. MM. dd");
-                                   date = sdf.format(selectedDate);
-                                   sdf = new SimpleDateFormat("hhmmss");
-                                   currentDate = new Date(System.currentTimeMillis());
-                                   id = new String(date.toString() + sdf.format(currentDate));
-
-                                   if(SQLiteManager.sqLiteManager.insertScheduleData(new ScheduleData(id,date,Exercise_id,set,number,0))) {
-                                       Toast.makeText(getContext(), "잘됨 무튼 잘됨.", Toast.LENGTH_SHORT).show();
-                                       exerciseListViewAdapter.setListViewItemList(SQLiteManager.sqLiteManager.selectScheduleFromDate(date));
-                                       exerciseListViewAdapter.notifyDataSetChanged();
-                                   }
-                                   else
-                                       Toast.makeText(getContext(),"DB 삽입 잘못됨.", Toast.LENGTH_SHORT).show();
-                               }
-                               else
-                                   Toast.makeText(getContext(),"운동 id 잘못됨 잘못됨.", Toast.LENGTH_SHORT).show();
-                           }
-                           else
-                               Toast.makeText(getContext(),"운동의 횟수가 입력되지 않았습니다.", Toast.LENGTH_SHORT).show();
-                       }
-                       else
-                           Toast.makeText(getContext(),"운동의 세트 수가 입력되지 않았습니다.", Toast.LENGTH_SHORT).show();
-                    }
-                    else
-                        Toast.makeText(getContext(),"이미 지난 날짜 입니다.", Toast.LENGTH_SHORT).show();
-                }
-
-                dismiss();
-            }
-        });
+        if(isForAdd)
+            dialogAddButton.setOnClickListener(addOnClickListener);
+        else {
+            dialogAddButton.setOnClickListener(editOnClickListener);
+            dialogAddButton.setText("확인");
+        }
         dialogCancelButton = (Button)findViewById(R.id.alertCancelButton);
         dialogCancelButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                setEditText.setText("");
+                numberEditText.setText("");
+                setEditText.setHint("SET");
+                numberEditText.setHint("횟수");
                 dismiss();
             }
         });
@@ -152,4 +231,6 @@ public class AddExerciseDialog extends Dialog {
     }
 
     public void setSelectedDate(Date date){this.selectedDate = date;}
+    public void setSelectedItemId(String id){this.selectedItemId = id;}
+
 }

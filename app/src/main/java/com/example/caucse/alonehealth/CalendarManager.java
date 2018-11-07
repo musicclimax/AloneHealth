@@ -2,8 +2,10 @@ package com.example.caucse.alonehealth;
 
 
 import android.content.Context;
+import android.content.DialogInterface;
 import android.database.Cursor;
 import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
@@ -31,6 +33,7 @@ import com.prolificinteractive.materialcalendarview.format.TitleFormatter;
 
 import org.w3c.dom.Text;
 
+import java.lang.annotation.Documented;
 import java.util.Date;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -53,10 +56,16 @@ public class CalendarManager extends AppCompatActivity {
     ListView listView;
     ExerciseListViewAdapter adapter;
     Button addExerciseButton;
+    Button editExerciseButton;
+    Button deleteExerciseButton;
     AddExerciseDialog addExerciseDialog;
+    AddExerciseDialog editExerciseDialog;
+    AlertDialog deleteExerciseDialog;
     TextView currentDateTextView;
     Date selectedDate;
     SimpleDateFormat simpleDateFormat;
+    int indexOfSelectedItem = -1;
+    String idOfSelectedItem;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -69,12 +78,37 @@ public class CalendarManager extends AppCompatActivity {
         listView.setAdapter(adapter);
 
         /**운동 추가 다이얼로그 창 설정*/
-        addExerciseDialog = new AddExerciseDialog(this,adapter);
+        addExerciseDialog = new AddExerciseDialog(this,adapter,true);
         addExerciseDialog.getWindow().setGravity(Gravity.BOTTOM);
 
+        /**운동 수정 다이얼로그 창 설정*/
+        editExerciseDialog = new AddExerciseDialog(this,adapter,false);
+        editExerciseDialog.getWindow().setGravity(Gravity.BOTTOM);
+
+        /**운동 수정 다이얼로그 창 설정*/
+        AlertDialog.Builder builder = new AlertDialog.Builder(this)
+                .setTitle("일정 삭제")
+                .setMessage("정말 삭제 하시겠습니까?")
+                .setPositiveButton("예",new DialogInterface.OnClickListener(){
+                    public void onClick(DialogInterface dlg, int value){
+                        SQLiteManager.sqLiteManager.deleteScheduleRecord(idOfSelectedItem);
+                        adapter.delete(indexOfSelectedItem);
+                        adapter.notifyDataSetChanged();
+                        editExerciseButton.setVisibility(View.INVISIBLE);
+                        deleteExerciseButton.setVisibility(View.INVISIBLE);
+                        addExerciseButton.setVisibility(View.VISIBLE);
+                        indexOfSelectedItem = -1;
+
+
+                    }
+                })
+                .setNegativeButton("아니요",null);
+        deleteExerciseDialog = builder.create();
         /////////////////////////////////////////////////////////////////////
-        /**운동 추가 버튼**/
+        /**운동 추가, 수정, 삭제 버튼**/
         addExerciseButton = findViewById(R.id.add_exercise_button);
+        editExerciseButton = findViewById(R.id.edit_exercise_button);
+        deleteExerciseButton = findViewById(R.id.delete_exercise_button);
 
 
         /**날짜 최신화*/
@@ -82,6 +116,7 @@ public class CalendarManager extends AppCompatActivity {
         long now = System.currentTimeMillis();
         Date date = new Date(now);
         addExerciseDialog.currentDate = new Date(now);
+        editExerciseDialog.currentDate = new Date(now);
         selectedDate = new Date(now);
         currentDateTextView.setText(simpleDateFormat.format(date));
         adapter.setListViewItemList(SQLiteManager.sqLiteManager.selectScheduleFromDate(simpleDateFormat.format(date)));
@@ -139,25 +174,34 @@ public class CalendarManager extends AppCompatActivity {
                 currentDateTextView.setText(simpleDateFormat.format(date.getDate()));
                 adapter.setListViewItemList(SQLiteManager.sqLiteManager.selectScheduleFromDate(simpleDateFormat.format(date.getDate())));
                 adapter.notifyDataSetChanged();
-                Toast.makeText(getApplicationContext(), shot_Day , Toast.LENGTH_SHORT).show();
+
             }
         });
         /////////////////////////////////////////////////////////////////////
 
-        //버튼 클릭 이미지 변경
-        addExerciseButton.setOnTouchListener(new View.OnTouchListener() {
+        /**버튼 클릭 리스너*/
+        //추가 버튼
+        addExerciseButton.setOnClickListener(new View.OnClickListener(){
             @Override
-            public boolean onTouch(View view, MotionEvent motionEvent) {
-                int action = motionEvent.getAction();
-                if(action == MotionEvent.ACTION_DOWN){
-                    addExerciseButton.setBackgroundResource(R.drawable.addpressedbutton128);
-                }
-                else if(action == MotionEvent.ACTION_UP){
-                    addExerciseButton.setBackgroundResource(R.drawable.addbutton128);
-                    addExerciseDialog.setSelectedDate(selectedDate);
-                    addExerciseDialog.show();
-                }
-                return true;
+            public void onClick(View view){
+                addExerciseDialog.setSelectedDate(selectedDate);
+                addExerciseDialog.show();
+            }
+        });
+        //수정버튼
+        editExerciseButton.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View view){
+                editExerciseDialog.setSelectedDate(selectedDate);
+                editExerciseDialog.setSelectedItemId(idOfSelectedItem);
+                editExerciseDialog.show();
+            }
+        });
+        //삭제버튼
+        deleteExerciseButton.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View view){
+                deleteExerciseDialog.show();
             }
         });
         /////////////////////////////////////////////////////////////////////
@@ -165,9 +209,22 @@ public class CalendarManager extends AppCompatActivity {
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                adapter.delete(i);
+                if(indexOfSelectedItem == i){
+                    editExerciseButton.setVisibility(View.INVISIBLE);
+                    deleteExerciseButton.setVisibility(View.INVISIBLE);
+                    addExerciseButton.setVisibility(View.VISIBLE);
+                    indexOfSelectedItem = -1;
+                }
+                else{
+                    editExerciseButton.setVisibility(View.VISIBLE);
+                    deleteExerciseButton.setVisibility(View.VISIBLE);
+                    addExerciseButton.setVisibility(View.INVISIBLE);
+                    indexOfSelectedItem = i;
+                }
+
                 adapter.notifyDataSetChanged();
-                Toast.makeText(getApplicationContext(), "i = " + i +"\n l = "+l, Toast.LENGTH_SHORT).show();
+                ScheduleData temp = (ScheduleData)adapterView.getItemAtPosition(i);
+                idOfSelectedItem = temp.getId();
             }
         });
 
@@ -224,4 +281,5 @@ public class CalendarManager extends AppCompatActivity {
             materialCalendarView.addDecorator(new EventDecorator(Color.GREEN, calendarDays,CalendarManager.this));
         }
     }
+
 }

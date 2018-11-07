@@ -47,13 +47,13 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:orientation="vertical"
-                android:background="#EEE">
+                android:background="#FFF">
 
                 <TextView
                     android:id="@+id/currentDate"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:background="#FFFFFF"
+                    android:background="#EEEEEE"
                     android:textColor="#000000"
                     android:textSize="20dp"
                     android:textAlignment="center"/>
@@ -73,9 +73,27 @@
                 android:layout_gravity="bottom|right"
                 android:layout_marginBottom="20dp"
                 android:layout_marginRight="20dp"
-                android:background="@drawable/addbutton128">
+                android:background = "@drawable/add_button_click">
 
             </Button>
+            <Button
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:id = "@+id/edit_exercise_button"
+                android:layout_gravity = "bottom|right"
+                android:layout_marginRight="90dp"
+                android:layout_marginBottom="20dp"
+                android:background = "@drawable/edit_button_click"
+                android:visibility="invisible"/>
+            <Button
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:id = "@+id/delete_exercise_button"
+                android:layout_gravity = "bottom|right"
+                android:layout_marginRight="20dp"
+                android:layout_marginBottom="20dp"
+                android:background = "@drawable/delete_button_click"
+                android:visibility="invisible"/>
 
         </FrameLayout>
     </LinearLayout>
