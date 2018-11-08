@@ -23,10 +23,11 @@
 
         <ImageView
             android:id="@+id/logo"
-            android:layout_width="45dp"
-            android:layout_height="45dp"
+            android:layout_width="100dp"
+            android:layout_height="40dp"
             android:layout_gravity="center"
-            android:padding="0dp"
+            android:adjustViewBounds="true"
+            android:background="@drawable/main_logo"
             android:scaleType="centerInside" />
 
         <Button
