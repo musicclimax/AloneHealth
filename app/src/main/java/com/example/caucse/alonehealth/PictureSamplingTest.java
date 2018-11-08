@@ -47,15 +47,15 @@ public class PictureSamplingTest extends AppCompatActivity
 
     private static final String TAG = "opencv";
     private CameraBridgeViewBase mOpenCvCameraView;
-    private Mat matInput;
-    private Mat matGray;
     private Mat matInversion;
+    private Mat matGray;
+    private Mat matInput;
     //테스트 시작 버튼
     private Button startTestButton;
     //테스트 로그 텍스트뷰
     private TextView testStateTextView;
     //딜레이 카운트
-    private int count = 5;
+    private int count = 7;
     //쓰레드 핸들러
     Handler mHandler = null;
     //타이머 쓰레드
@@ -65,6 +65,7 @@ public class PictureSamplingTest extends AppCompatActivity
     private Mat mEndSample;
     int min_distance = Integer.MAX_VALUE;
     // 테스트 state
+    boolean stateInit = true;
     boolean stateTestStart = false;
     boolean stateSamplingStart = false;
     boolean stateTestEnd = false;
@@ -133,28 +134,24 @@ public class PictureSamplingTest extends AppCompatActivity
         //UI처리 쓰레드 핸들러
         mHandler = new Handler(){
           public void handleMessage(Message msg){
-              if(stateSamplingStart){
+              if(stateSamplingStart&&!stateTestStart&&!stateTestEnd){
                   if(msg.what != 0){
                       testStateTextView.setText("표본 추출중 " + count);
                   }
                   else{
                       stateSamplingStart = false;
-                      testStateTextView.setText("표본 추출 완료" + min_distance);
+                      testStateTextView.setText("표본 추출 완료" + compareFeature(mEndSample,mEndSample) + " , " + compareFeature(mStartSample,mStartSample) + " , " + compareFeature(mStartSample,mEndSample));
+                      testStateTextView.setTextSize(20);
                       stateTestEnd = true;
-                      Bitmap bitmap = Bitmap.createBitmap(startResultImage.width(),startResultImage.height(),null);
-                      Utils.matToBitmap(startResultImage,bitmap);
-                      BitmapDrawable ob = new BitmapDrawable(getResources(),bitmap);
-                      startResultView.setBackgroundDrawable(ob);
-                      Utils.matToBitmap(endResultImage,bitmap);
-                      ob = new BitmapDrawable(getResources(),bitmap);
-                      endResultView.setBackgroundDrawable(ob);
                   }
               }
-              else{
+              else if(!stateSamplingStart&&!stateTestStart&&!stateTestEnd&&stateInit){
                   if(msg.what != 0)
                       testStateTextView.setText(String.valueOf(msg.what));
-                  else
+                  else {
                       stateTestStart = true;
+                      stateInit = false;
+                  }
               }
 
 
@@ -180,22 +177,18 @@ public class PictureSamplingTest extends AppCompatActivity
         testStateTextView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                    startResultView.setVisibility(View.INVISIBLE);
-                    endResultView.setVisibility(View.VISIBLE);
-            }
-        });
-        startResultView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startResultView.setVisibility(View.INVISIBLE);
-                endResultView.setVisibility(View.VISIBLE);
-            }
-        });
-        endResultView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+                Bitmap bitmap1 = Bitmap.createBitmap(startResultImage.width(),startResultImage.height(),null);
+                Utils.matToBitmap(startResultImage,bitmap1);
+                BitmapDrawable ob = new BitmapDrawable(getResources(),bitmap1);
+                startResultView.setBackgroundDrawable(ob);
+                Bitmap  bitmap2 = Bitmap.createBitmap(startResultImage.width(),startResultImage.height(),null);
+                Utils.matToBitmap(endResultImage,bitmap2);
+                ob = new BitmapDrawable(getResources(),bitmap2);
+                endResultView.setBackgroundDrawable(ob);
                 startResultView.setVisibility(View.VISIBLE);
-                endResultView.setVisibility(View.INVISIBLE);
+                endResultView.setVisibility(View.VISIBLE);
+                testStateTextView.setVisibility(View.INVISIBLE);
+
             }
         });
     }
@@ -243,24 +236,22 @@ public class PictureSamplingTest extends AppCompatActivity
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
 
         matInput = inputFrame.rgba();
-
         if(matInversion == null)
             matInversion = new Mat(matInput.rows(),matInput.cols(),matInput.type());
         InvertMat(matInput.getNativeObjAddr(),matInversion.getNativeObjAddr());
-
-        if ( matGray == null )
+        if(matGray == null)
             matGray = new Mat(matInput.rows(), matInput.cols(), matInput.type());
         ConvertRGBtoGray(matInversion.getNativeObjAddr(), matGray.getNativeObjAddr());
 
         // 테스트 시작 단계
         if(stateTestStart){
             mStartSample = extractDescriptor(matGray);
-            startResultImage = matInversion;
+            startResultImage = matInversion.clone();
             stateTestStart = false;
             stateSamplingStart = true;
 
             /**테스트 시작*/
-            count = 3;
+            count = 5;
             timerThread = new TimerThread();
             timerThread.start();
         }
@@ -268,7 +259,6 @@ public class PictureSamplingTest extends AppCompatActivity
             CompareThread compareThread = new CompareThread();
             compareThread.start();
         }
-
         return matInversion;
     }
 
@@ -355,15 +345,17 @@ public class PictureSamplingTest extends AppCompatActivity
     }
     public class CompareThread extends Thread{
         public void run(){
-            if(!stateTestEnd) {
+            if(!stateTestEnd&&stateSamplingStart) {
                 Mat matCandidate = extractDescriptor(matGray);
                 int distance;
                 /**표본추출 시작*/
                 distance = compareFeature(mStartSample, matCandidate);
+                Log.d("min : ",String.valueOf(min_distance));
                 if (distance < min_distance) {
                     min_distance = distance;
                     mEndSample = matCandidate;
-                    endResultImage = matInversion;
+                    endResultImage = matInversion.clone();
+
                 }
             }
         }

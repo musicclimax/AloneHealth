@@ -68,6 +68,7 @@ public class CalendarManager extends AppCompatActivity {
     SimpleDateFormat simpleDateFormat;
     int indexOfSelectedItem = -1;
     String idOfSelectedItem;
+    int isDone;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -121,6 +122,7 @@ public class CalendarManager extends AppCompatActivity {
             public void onClick(View v) {
                 Intent intent = new Intent(getApplicationContext(),
                         CalendarManager.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 startActivity(intent);
             }
         });
@@ -132,6 +134,7 @@ public class CalendarManager extends AppCompatActivity {
             public void onClick(View v) {
                 Intent intent = new Intent(getApplicationContext(),
                         MainActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 startActivity(intent);
             }
         });
@@ -217,9 +220,9 @@ public class CalendarManager extends AppCompatActivity {
         editExerciseButton.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View view){
-                editExerciseDialog.setSelectedDate(selectedDate);
-                editExerciseDialog.setSelectedItemId(idOfSelectedItem);
-                editExerciseDialog.show();
+                    editExerciseDialog.setSelectedDate(selectedDate);
+                    editExerciseDialog.setSelectedItemId(idOfSelectedItem);
+                    editExerciseDialog.show();
             }
         });
         //삭제버튼
@@ -235,17 +238,22 @@ public class CalendarManager extends AppCompatActivity {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
                 listView.refreshDrawableState();
+                ScheduleData temp = (ScheduleData)adapterView.getItemAtPosition(i);
+                idOfSelectedItem = temp.getId();
+                isDone = temp.getIsDone();
                     if(indexOfSelectedItem != i)
                     {
                         indexOfSelectedItem = i;
-                        editExerciseButton.setVisibility(View.VISIBLE);
-                        deleteExerciseButton.setVisibility(View.VISIBLE);
-                        addExerciseButton.setVisibility(View.INVISIBLE);
+                        if(isDone == 0) {
+                            editExerciseButton.setVisibility(View.VISIBLE);
+                            deleteExerciseButton.setVisibility(View.VISIBLE);
+                            addExerciseButton.setVisibility(View.INVISIBLE);
+                        }
                         for(int iCnt = 0; iCnt< listView.getAdapter().getCount();iCnt++)
                         {
                             if(iCnt == i)
                             {
-                                getViewByPosition(iCnt,listView).setBackgroundColor(Color.GREEN);
+                                getViewByPosition(iCnt,listView).setBackgroundColor(Color.rgb(210,210,210));
                             }
                             else
                             {
@@ -262,8 +270,7 @@ public class CalendarManager extends AppCompatActivity {
                         indexOfSelectedItem = listView.getAdapter().getCount()+1;
                     }
                 adapter.notifyDataSetChanged();
-                ScheduleData temp = (ScheduleData)adapterView.getItemAtPosition(i);
-                idOfSelectedItem = temp.getId();
+
 
                /* if(indexOfSelectedItem == i){
                     editExerciseButton.setVisibility(View.INVISIBLE);
@@ -282,6 +289,13 @@ public class CalendarManager extends AppCompatActivity {
 
 
 
+    }
+
+    @Override
+    public void onBackPressed(){
+        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        startActivity(intent);
     }
 
     //리스트뷰에서 포지션위치의 자식을 받아오는 함수
