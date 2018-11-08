@@ -51,6 +51,9 @@ public class ExerciseShotActivity extends AppCompatActivity
     private CameraBridgeViewBase mOpenCvCameraView;
     TextToSpeech tts;
     ORB orb;
+    int set, num;
+    String exercise;
+
     public native void ConvertRGBtoGray(long matAddrInput, long matAddrResult);
 
     static {
@@ -86,11 +89,17 @@ public class ExerciseShotActivity extends AppCompatActivity
         exercisetext = (TextView) findViewById(R.id.exercisetext);
         settext = (TextView) findViewById(R.id.settext);
 
+        Intent intent = getIntent();
+        exercise = intent.getExtras().getString("Exercise");
+        num = intent.getExtras().getInt("Number");
+        set = intent.getExtras().getInt("Set");
+        exercisetext.setText(exercise);
+        settext.setText(set + " SET " + num);
 
-       tts = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
+        tts = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
             @Override
             public void onInit(int status) {
-                if(status != ERROR){
+                if (status != ERROR) {
                     tts.setLanguage(Locale.KOREAN);
                 }
             }
@@ -147,7 +156,7 @@ public class ExerciseShotActivity extends AppCompatActivity
     }
 
     @Override
-    public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame){
+    public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
         matInput = inputFrame.rgba();
         //flip(matInput, matResult, 1);
         //if (matResult == null) matResult.release();
@@ -178,10 +187,7 @@ public class ExerciseShotActivity extends AppCompatActivity
         mOpenCvCameraView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(startButton.getVisibility() == startButton.GONE) {
-                    tts.setPitch(1.0f);
-                    tts.setSpeechRate(1.0f);
-                    tts.speak("않이 외않되", TextToSpeech.QUEUE_FLUSH, null);
+                if (startButton.getVisibility() == startButton.GONE) {
                     stopImage.setVisibility(stopImage.VISIBLE);
                     stopImage.bringToFront();
                 }
@@ -193,20 +199,21 @@ public class ExerciseShotActivity extends AppCompatActivity
             public void onClick(View v) {
                 AlertDialog.Builder builder = new AlertDialog.Builder(ExerciseShotActivity.this)
                         .setTitle("운동 중지")
-                        .setMessage("운동을 그만 두시겠습니까?").setPositiveButton("예",new DialogInterface.OnClickListener(){
-                            public void onClick(DialogInterface dlg, int value){
+                        .setMessage("운동을 그만 두시겠습니까?").setPositiveButton("예", new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dlg, int value) {
                                 Intent intent = new Intent(getApplicationContext(),
                                         MainActivity.class);
                                 startActivity(intent);
                             }
                         })
-                        .setNegativeButton("아니요",null);
+                        .setNegativeButton("아니요", null);
                 builder.show();
             }
         });
 
         return matInput;
     }
+
     //여기서부턴 퍼미션 관련 메소드
     static final int PERMISSIONS_REQUEST_CODE = 1000;
     String[] PERMISSIONS = {"android.permission.CAMERA"};
