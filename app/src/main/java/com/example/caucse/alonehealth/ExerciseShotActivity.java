@@ -42,6 +42,7 @@ import java.util.Locale;
 
 import static android.speech.tts.TextToSpeech.ERROR;
 import static org.opencv.core.Core.flip;
+import static org.opencv.core.Core.min;
 
 public class ExerciseShotActivity extends AppCompatActivity
         implements CameraBridgeViewBase.CvCameraViewListener2 {
@@ -69,10 +70,11 @@ public class ExerciseShotActivity extends AppCompatActivity
     int progress = -1;
     private final static int START_EXERCISE = 0;
     private final static int START_SAMPLING = 1;
-    private final static int TOWARD_SAMPLING = 2;
-    private final static int TOWARD_EXERCISE = 3;
-    private final static int COMPLETE_EXERCISE = 4;
-    private final static int REST_EXERCISE = 5;
+    private final static int END_SAMPLING = 2;
+    private final static int TOWARD_SAMPLING = 3;
+    private final static int TOWARD_EXERCISE = 4;
+    private final static int COMPLETE_EXERCISE = 5;
+    private final static int REST_EXERCISE = 6;
     ///////////////////////////////////
     Button startButton;
     ImageView stopImage;
@@ -92,7 +94,7 @@ public class ExerciseShotActivity extends AppCompatActivity
     boolean isFirstPosition = false;
     boolean isLastPosition = true;
     int exercise_count = 0;
-    int exercise_set = 0;
+    int exercise_set = 1;
 
 
     public native void ConvertRGBtoGray(long matAddrInput, long matAddrResult);
@@ -222,17 +224,25 @@ public class ExerciseShotActivity extends AppCompatActivity
                     switch(progress){
                         case START_EXERCISE:
                             progress = START_SAMPLING;
-                            tts.speak(String.format("표본 추출을 위해 %d초 안에 운동을 1회 실시해 주세요.",samplingInterval), TextToSpeech.QUEUE_FLUSH, null);
+                            tts.speak(String.format("표본 추출을 위해 운동 시작 자세를 취해 주세요.",samplingInterval), TextToSpeech.QUEUE_FLUSH, null);
                             TimerThread timerThread = new TimerThread();
                             count = samplingInterval + 5;
                             timerThread.start();
                             break;
                         case START_SAMPLING:
+                            progress = END_SAMPLING;
+                            tts.speak(String.format("운동 끝 자세를 취해 주세요.",samplingInterval), TextToSpeech.QUEUE_FLUSH, null);
+                            TimerThread timerThread4 = new TimerThread();
+                            count = samplingInterval + 5;
+                            timerThread4.start();
                             break;
-                        case TOWARD_SAMPLING:
+                        case END_SAMPLING:
+                            min_distance = compareFeature(mStartSample,mEndSample);
                             tts.speak(String.format("운동을 시작해주세요."), TextToSpeech.QUEUE_FLUSH, null);
                             currentSetNumberTextView.setText(String.format("MIN = %d",min_distance));
                             progress = TOWARD_EXERCISE;
+                            break;
+                        case TOWARD_SAMPLING:
                             break;
                         case TOWARD_EXERCISE:
                             if(exercise_count == num){
@@ -321,21 +331,25 @@ public class ExerciseShotActivity extends AppCompatActivity
             matGray = new Mat(matInput.rows(), matInput.cols(), matInput.type());
         ConvertRGBtoGray(matInversion.getNativeObjAddr(), matGray.getNativeObjAddr());
 
-        switch(progress){
-            case START_EXERCISE:
-                break;
-            case START_SAMPLING:
-                mStartSample = extractDescriptor(matGray);
-                progress = TOWARD_SAMPLING;
-                break;
-            case TOWARD_SAMPLING:
-                SamplingThread samplingThread = new SamplingThread();
-                samplingThread.start();
-                break;
-            case TOWARD_EXERCISE:
-                CompareThread compareThread = new CompareThread();
-                compareThread.start();
-                break;
+        if(!tts.isSpeaking()) {
+            switch (progress) {
+                case START_EXERCISE:
+                    break;
+                case START_SAMPLING:
+                    mStartSample = extractDescriptor(matGray);
+                    break;
+                case END_SAMPLING:
+                    mEndSample = extractDescriptor(matGray);
+                    break;
+                case TOWARD_SAMPLING:
+                /*SamplingThread samplingThread = new SamplingThread();
+                samplingThread.start();*/
+                    break;
+                case TOWARD_EXERCISE:
+                    CompareThread compareThread = new CompareThread();
+                    compareThread.start();
+                    break;
+            }
         }
         return matInversion;
 
@@ -442,7 +456,9 @@ public class ExerciseShotActivity extends AppCompatActivity
                     isLastPosition = true;
                     exercise_count++;
                     tts.speak(String.format("%d",exercise_count), TextToSpeech.QUEUE_FLUSH, null);
-                    mHandler.sendEmptyMessage(0);
+                    TimerThread timerThread = new TimerThread();
+                    count = 2;
+                    timerThread.start();
                 }
             }
             else if(isLastPosition){
