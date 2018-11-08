@@ -37,6 +37,7 @@ import org.opencv.features2d.ORB;
 import java.util.Locale;
 
 import static android.speech.tts.TextToSpeech.ERROR;
+import static org.opencv.core.Core.flip;
 
 public class ExerciseShotActivity extends AppCompatActivity
         implements CameraBridgeViewBase.CvCameraViewListener2 {
@@ -103,16 +104,11 @@ public class ExerciseShotActivity extends AppCompatActivity
             }
         }
 
-
         mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.activity_surface_view);
         mOpenCvCameraView.setVisibility(SurfaceView.VISIBLE);
         mOpenCvCameraView.setCvCameraViewListener(this);
         mOpenCvCameraView.setCameraIndex(0); // front-camera(1),  back-camera(0)
         mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
-
-
-
-
     }
 
     @Override
@@ -125,7 +121,6 @@ public class ExerciseShotActivity extends AppCompatActivity
     @Override
     public void onResume() {
         super.onResume();
-
         if (!OpenCVLoader.initDebug()) {
             Log.d(TAG, "onResume :: Internal OpenCV library not found.");
             OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_2_0, this, mLoaderCallback);
@@ -154,16 +149,18 @@ public class ExerciseShotActivity extends AppCompatActivity
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame){
         matInput = inputFrame.rgba();
-        matResult = new Mat(matInput.rows(), matInput.cols(), matInput.type());
-        if (matResult == null) matResult.release();
-        ConvertRGBtoGray(matInput.getNativeObjAddr(), matResult.getNativeObjAddr());
+        //flip(matInput, matResult, 1);
+        //if (matResult == null) matResult.release();
+        //ConvertRGBtoGray(matInput.getNativeObjAddr(), matResult.getNativeObjAddr());
+        /*if(matResult == null)
+            matResult = new Mat(matInput.rows(), matInput.cols(), matInput.type());
         keypoints1 = new MatOfKeyPoint();
         descriptors1 = new Mat();
         outputImage = new Mat();
         orb = ORB.create();
         orb.detect(matResult, keypoints1);
-        orb.compute(matResult, keypoints1, descriptors1);
-        Features2d.drawKeypoints(matResult, keypoints1, outputImage, new Scalar(0, 255, 0), 0);
+        orb.compute(matResult, keypoints1, descriptors1);*/
+        //Features2d.drawKeypoints(matResult, keypoints1, outputImage, new Scalar(0, 255, 0), 0);
 
         startButton = (Button) findViewById(R.id.startbutton);
         stopImage = (ImageView) findViewById(R.id.stop);
@@ -199,7 +196,7 @@ public class ExerciseShotActivity extends AppCompatActivity
                         .setMessage("운동을 그만 두시겠습니까?").setPositiveButton("예",new DialogInterface.OnClickListener(){
                             public void onClick(DialogInterface dlg, int value){
                                 Intent intent = new Intent(getApplicationContext(),
-                                        CalendarManager.class);
+                                        MainActivity.class);
                                 startActivity(intent);
                             }
                         })
@@ -208,7 +205,7 @@ public class ExerciseShotActivity extends AppCompatActivity
             }
         });
 
-        return outputImage;
+        return matInput;
     }
     //여기서부턴 퍼미션 관련 메소드
     static final int PERMISSIONS_REQUEST_CODE = 1000;
@@ -268,6 +265,5 @@ public class ExerciseShotActivity extends AppCompatActivity
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         Toast.makeText(getBaseContext(), "resultCode : " + resultCode, Toast.LENGTH_SHORT).show();
     }
-
 
 }
