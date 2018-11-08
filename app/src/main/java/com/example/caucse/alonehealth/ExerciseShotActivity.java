@@ -94,7 +94,7 @@ public class ExerciseShotActivity extends AppCompatActivity
     boolean isFirstPosition = false;
     boolean isLastPosition = true;
     int exercise_count = 0;
-    int exercise_set = 1;
+    int exercise_set = 0;
 
 
     public native void ConvertRGBtoGray(long matAddrInput, long matAddrResult);
@@ -181,6 +181,7 @@ public class ExerciseShotActivity extends AppCompatActivity
                 tts.setSpeechRate(1.0f);
                 tts.speak(String.format("운동을 시작합니다. %d초 안에 자세를 취해주세요",exercisePrepareInterval), TextToSpeech.QUEUE_FLUSH, null);
                 TimerThread timerThread = new TimerThread();
+                timerThread.setDaemon(true);
                 count = exercisePrepareInterval+5;
                 timerThread.start();
                 progress = START_EXERCISE;
@@ -206,9 +207,10 @@ public class ExerciseShotActivity extends AppCompatActivity
                             public void onClick(DialogInterface dlg, int value) {
                                 Intent intent = new Intent(getApplicationContext(),
                                         MainActivity.class);
+                                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                                progress = -1;
+                                tts.shutdown();
                                 startActivity(intent);
-                                tts.stop();
-                                finish();
 
                             }
                         })
@@ -226,14 +228,14 @@ public class ExerciseShotActivity extends AppCompatActivity
                             progress = START_SAMPLING;
                             tts.speak(String.format("표본 추출을 위해 운동 시작 자세를 취해 주세요.",samplingInterval), TextToSpeech.QUEUE_FLUSH, null);
                             TimerThread timerThread = new TimerThread();
-                            count = samplingInterval + 5;
+                            count = samplingInterval + 1;
                             timerThread.start();
                             break;
                         case START_SAMPLING:
                             progress = END_SAMPLING;
                             tts.speak(String.format("운동 끝 자세를 취해 주세요.",samplingInterval), TextToSpeech.QUEUE_FLUSH, null);
                             TimerThread timerThread4 = new TimerThread();
-                            count = samplingInterval + 5;
+                            count = samplingInterval + 1;
                             timerThread4.start();
                             break;
                         case END_SAMPLING:
@@ -245,9 +247,9 @@ public class ExerciseShotActivity extends AppCompatActivity
                         case TOWARD_SAMPLING:
                             break;
                         case TOWARD_EXERCISE:
-                            if(exercise_count == num){
+                            if(exercise_count >= num){
                                 exercise_set++;
-                                if(exercise_set == set){
+                                if(exercise_set >= set){
                                     progress = COMPLETE_EXERCISE;
                                     tts.speak(String.format("운동이 완료되었습니다. ",setInterval), TextToSpeech.QUEUE_FLUSH, null);
                                     TimerThread timerThread2 = new TimerThread();
@@ -264,7 +266,7 @@ public class ExerciseShotActivity extends AppCompatActivity
 
                                 }
                             }
-                            currentSetNumberTextView.setText(String.format("%d SET %d /",exercise_set,exercise_count));
+                            currentSetNumberTextView.setText(String.format("%d SET %d /",exercise_set+1,exercise_count));
                             break;
                         case REST_EXERCISE:
                             tts.speak(String.format("운동을 다시 시작해주세요. ",setInterval), TextToSpeech.QUEUE_FLUSH, null);
@@ -283,6 +285,14 @@ public class ExerciseShotActivity extends AppCompatActivity
             }
         };
 
+    }
+
+    @Override
+    public void onBackPressed(){
+        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+        tts.shutdown();
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        startActivity(intent);
     }
 
     @Override
@@ -442,11 +452,6 @@ public class ExerciseShotActivity extends AppCompatActivity
     }
     public class CompareThread extends Thread{
         public synchronized void run(){
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
             Mat matCandidate = extractDescriptor(matGray);
             int distance;
             if(isFirstPosition){
@@ -456,9 +461,13 @@ public class ExerciseShotActivity extends AppCompatActivity
                     isLastPosition = true;
                     exercise_count++;
                     tts.speak(String.format("%d",exercise_count), TextToSpeech.QUEUE_FLUSH, null);
-                    TimerThread timerThread = new TimerThread();
-                    count = 2;
-                    timerThread.start();
+                    if(exercise_count >= num){
+                        TimerThread timerThread = new TimerThread();
+                        count = 2;
+                        timerThread.start();
+                    }
+                    else
+                        mHandler.sendEmptyMessage(0);
                 }
             }
             else if(isLastPosition){

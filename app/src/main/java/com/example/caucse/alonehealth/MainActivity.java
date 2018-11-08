@@ -232,7 +232,7 @@ public class MainActivity extends AppCompatActivity{
                                                 {
                                                     if(iCnt == i)
                                                     {
-                                                        getViewByPosition(iCnt,cal_listView).setBackgroundColor(Color.rgb(255,255,0));
+                                                        getViewByPosition(iCnt,cal_listView).setBackgroundColor(Color.rgb(210,210,210));
                                                         //선택된 날짜 및 아이디값 셋팅
                                                         ScheduleData temp = (ScheduleData)adapterView.getItemAtPosition(i);
                                                         selectedItemId = temp.getId();

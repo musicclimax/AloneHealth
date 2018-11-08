@@ -1,10 +1,6 @@
 /*
  * This file is auto-generated.  DO NOT MODIFY.
-<<<<<<< Updated upstream
- * Original file: C:\\Users\\music\\AndroidStudioProjects\\AloneHealth\\openCVLibrary342\\src\\main\\aidl\\org\\opencv\\engine\\OpenCVEngineInterface.aidl
-=======
- * Original file: C:\\Users\\DONGGEUMKIM\\AloneHealth\\openCVLibrary342\\src\\main\\aidl\\org\\opencv\\engine\\OpenCVEngineInterface.aidl
->>>>>>> Stashed changes
+ * Original file: C:\\Users\\user\\AndroidStudioProjects\\AloneHealth\\openCVLibrary342\\src\\main\\aidl\\org\\opencv\\engine\\OpenCVEngineInterface.aidl
  */
 package org.opencv.engine;
 /**

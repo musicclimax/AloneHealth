@@ -244,14 +244,16 @@ public class CalendarManager extends AppCompatActivity {
                     if(indexOfSelectedItem != i)
                     {
                         indexOfSelectedItem = i;
-                        editExerciseButton.setVisibility(View.VISIBLE);
-                        deleteExerciseButton.setVisibility(View.VISIBLE);
-                        addExerciseButton.setVisibility(View.INVISIBLE);
+                        if(isDone == 0) {
+                            editExerciseButton.setVisibility(View.VISIBLE);
+                            deleteExerciseButton.setVisibility(View.VISIBLE);
+                            addExerciseButton.setVisibility(View.INVISIBLE);
+                        }
                         for(int iCnt = 0; iCnt< listView.getAdapter().getCount();iCnt++)
                         {
                             if(iCnt == i)
                             {
-                                getViewByPosition(iCnt,listView).setBackgroundColor(Color.YELLOW);
+                                getViewByPosition(iCnt,listView).setBackgroundColor(Color.rgb(210,210,210));
                             }
                             else
                             {
@@ -287,6 +289,13 @@ public class CalendarManager extends AppCompatActivity {
 
 
 
+    }
+
+    @Override
+    public void onBackPressed(){
+        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        startActivity(intent);
     }
 
     //리스트뷰에서 포지션위치의 자식을 받아오는 함수
