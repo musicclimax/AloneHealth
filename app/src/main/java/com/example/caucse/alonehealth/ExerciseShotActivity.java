@@ -241,7 +241,6 @@ public class ExerciseShotActivity extends AppCompatActivity
                         case END_SAMPLING:
                             min_distance = compareFeature(mStartSample,mEndSample);
                             tts.speak(String.format("운동을 시작해주세요."), TextToSpeech.QUEUE_FLUSH, null);
-                            currentSetNumberTextView.setText(String.format("MIN = %d",min_distance));
                             progress = TOWARD_EXERCISE;
                             break;
                         case TOWARD_SAMPLING:
@@ -266,7 +265,7 @@ public class ExerciseShotActivity extends AppCompatActivity
 
                                 }
                             }
-                            currentSetNumberTextView.setText(String.format("%d SET %d /",exercise_set+1,exercise_count));
+                            currentSetNumberTextView.setText(String.format("%d SET %d",exercise_set+1,exercise_count));
                             break;
                         case REST_EXERCISE:
                             tts.speak(String.format("운동을 다시 시작해주세요. ",setInterval), TextToSpeech.QUEUE_FLUSH, null);
