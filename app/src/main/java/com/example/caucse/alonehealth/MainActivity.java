@@ -221,10 +221,13 @@ public class MainActivity extends AppCompatActivity{
                                     public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
                                         {
                                             cal_listView.refreshDrawableState();
-                                            if(preSelectPos != i && ((ScheduleData)adapterView.getItemAtPosition(i)).getIsDone() == 0)
+                                            if(preSelectPos != i)
                                             {
                                                 preSelectPos = i;
-                                                startbutton.setVisibility(View.VISIBLE);
+                                                if(((ScheduleData)adapterView.getItemAtPosition(i)).getIsDone() == 0)
+                                                    startbutton.setVisibility(View.VISIBLE);
+                                                else if(((ScheduleData)adapterView.getItemAtPosition(i)).getIsDone() == 1)
+                                                    startbutton.setVisibility(View.INVISIBLE);
                                                 for(int iCnt = 0; iCnt< cal_listView.getAdapter().getCount();iCnt++)
                                                 {
                                                     if(iCnt == i)
