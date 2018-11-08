@@ -12,7 +12,7 @@ public class DateForm {
     String day_str;
     public DateForm()
     {
-        df_date = new SimpleDateFormat("yyyy-MM-dd");
+        df_date = new SimpleDateFormat("yyyy. MM. dd");
         df_day = new SimpleDateFormat("E", Locale.KOREAN);
     }
 

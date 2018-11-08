@@ -93,7 +93,7 @@ public class DateAdapter extends PagerAdapter {
         //true 일때
         if(LeftOrRight)
         {
-            SimpleDateFormat DATESDF = new SimpleDateFormat("yyyy-MM-dd");
+            SimpleDateFormat DATESDF = new SimpleDateFormat("yyyy. MM. dd");
             SimpleDateFormat DAYSDF = new SimpleDateFormat("E", Locale.KOREAN);
             try{
                 Date date = DATESDF.parse(DateList.get(position-1).date_str);
@@ -118,7 +118,7 @@ public class DateAdapter extends PagerAdapter {
         }
         else
         {
-            SimpleDateFormat DATESDF = new SimpleDateFormat("yyyy-MM-dd");
+            SimpleDateFormat DATESDF = new SimpleDateFormat("yyyy. MM. dd");
             SimpleDateFormat DAYSDF = new SimpleDateFormat("E", Locale.KOREAN);
             try{
                 Date date = DATESDF.parse(DateList.get(position+1).date_str);

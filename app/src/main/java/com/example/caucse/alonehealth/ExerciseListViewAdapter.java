@@ -1,6 +1,7 @@
 package com.example.caucse.alonehealth;
 
 import android.content.Context;
+import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -16,7 +17,6 @@ import java.util.List;
 
 public class ExerciseListViewAdapter extends BaseAdapter {
     private ArrayList<ScheduleData> listViewItemList = new ArrayList<ScheduleData>() ;
-
     public ExerciseListViewAdapter() {
 
     }
@@ -52,7 +52,21 @@ public class ExerciseListViewAdapter extends BaseAdapter {
         exerciseSetTextView.setText(String.valueOf(listViewItem.getSet()) + " SET");
         exerciseNumberTextView.setText(String.valueOf(listViewItem.getNumber()) + " 회");
 
-
+        //운동 유무에 따라 글자색 표시
+        if(listViewItem.getIsDone() == 1)
+        {
+            //운동을 실시했을때
+            exerciseNameTextView.setTextColor(Color.GREEN);
+            exerciseSetTextView.setTextColor(Color.GREEN);
+            exerciseNumberTextView.setTextColor(Color.GREEN);
+        }
+        else if(listViewItem.getIsDone() == 0)
+        {
+            //운동을 실시하지 않았을때
+            exerciseNameTextView.setTextColor(Color.RED);
+            exerciseSetTextView.setTextColor(Color.RED);
+            exerciseNumberTextView.setTextColor(Color.RED);
+        }
 
         return convertView;
     }
@@ -79,6 +93,10 @@ public class ExerciseListViewAdapter extends BaseAdapter {
            listViewItemList = itemList;
     }
 
-
+    private class ViewHolder {
+        TextView exerciseNameTextView;
+        TextView exerciseSetTextView;
+        TextView exerciseNumberTextView;
+    }
 
 }

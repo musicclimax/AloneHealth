@@ -20,11 +20,18 @@ Java_com_example_caucse_alonehealth_MainActivity_ConvertRGBtoGray(JNIEnv *env, j
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_caucse_alonehealth_OpenCVTest_ConvertRGBtoGray(JNIEnv *env, jobject instance,
+Java_com_example_caucse_alonehealth_ExerciseShotActivity_ConvertRGBtoGray(JNIEnv *env, jobject instance,
                                                                 jlong matAddrInput,
                                                                 jlong matAddrResult) {
 
     // TODO
+    Mat &matInput = *(Mat *)matAddrInput;
+
+    Mat &matResult = *(Mat *)matAddrResult;
+
+
+    cvtColor(matInput, matResult, CV_RGBA2GRAY);
+
 
 }extern "C"
 JNIEXPORT void JNICALL

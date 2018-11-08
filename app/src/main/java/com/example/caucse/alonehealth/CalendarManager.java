@@ -3,6 +3,7 @@ package com.example.caucse.alonehealth;
 
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
@@ -12,6 +13,7 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.Toolbar;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Gravity;
@@ -110,7 +112,30 @@ public class CalendarManager extends AppCompatActivity {
         editExerciseButton = findViewById(R.id.edit_exercise_button);
         deleteExerciseButton = findViewById(R.id.delete_exercise_button);
 
+        ///////////////////////////////툴바//////////////////////////////////
+        Toolbar toolbar = (Toolbar)findViewById(R.id.myToolbar);
+        /*일정관리 버튼 누를시
+         *일정관리페이지로 이동*/
+        toolbar.findViewById(R.id.Schedule_button).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(getApplicationContext(),
+                        CalendarManager.class);
+                startActivity(intent);
+            }
+        });
 
+        /*홈 버튼 누를시
+         *첫화면으로 이동*/
+        toolbar.findViewById(R.id.home_button).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(getApplicationContext(),
+                        MainActivity.class);
+                startActivity(intent);
+            }
+        });
+        /////////////////////////////////////////////////////////////////
         /**날짜 최신화*/
         currentDateTextView = (TextView)findViewById(R.id.currentDate);
         long now = System.currentTimeMillis();
@@ -209,7 +234,38 @@ public class CalendarManager extends AppCompatActivity {
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                if(indexOfSelectedItem == i){
+                listView.refreshDrawableState();
+                    if(indexOfSelectedItem != i)
+                    {
+                        indexOfSelectedItem = i;
+                        editExerciseButton.setVisibility(View.VISIBLE);
+                        deleteExerciseButton.setVisibility(View.VISIBLE);
+                        addExerciseButton.setVisibility(View.INVISIBLE);
+                        for(int iCnt = 0; iCnt< listView.getAdapter().getCount();iCnt++)
+                        {
+                            if(iCnt == i)
+                            {
+                                getViewByPosition(iCnt,listView).setBackgroundColor(Color.GREEN);
+                            }
+                            else
+                            {
+                                getViewByPosition(iCnt,listView).setBackgroundColor(Color.WHITE);
+                            }
+                        }
+                    }
+                    else if(indexOfSelectedItem == i)
+                    {
+                        editExerciseButton.setVisibility(View.INVISIBLE);
+                        deleteExerciseButton.setVisibility(View.INVISIBLE);
+                        addExerciseButton.setVisibility(View.VISIBLE);
+                        getViewByPosition(i,listView).setBackgroundColor(Color.WHITE);
+                        indexOfSelectedItem = listView.getAdapter().getCount()+1;
+                    }
+                adapter.notifyDataSetChanged();
+                ScheduleData temp = (ScheduleData)adapterView.getItemAtPosition(i);
+                idOfSelectedItem = temp.getId();
+
+               /* if(indexOfSelectedItem == i){
                     editExerciseButton.setVisibility(View.INVISIBLE);
                     deleteExerciseButton.setVisibility(View.INVISIBLE);
                     addExerciseButton.setVisibility(View.VISIBLE);
@@ -220,16 +276,25 @@ public class CalendarManager extends AppCompatActivity {
                     deleteExerciseButton.setVisibility(View.VISIBLE);
                     addExerciseButton.setVisibility(View.INVISIBLE);
                     indexOfSelectedItem = i;
-                }
-
-                adapter.notifyDataSetChanged();
-                ScheduleData temp = (ScheduleData)adapterView.getItemAtPosition(i);
-                idOfSelectedItem = temp.getId();
+                }*/
             }
         });
 
 
 
+    }
+
+    //리스트뷰에서 포지션위치의 자식을 받아오는 함수
+    public View getViewByPosition(int position, ListView listView) {
+        final int firstListItemPosition = listView.getFirstVisiblePosition();
+        final int lastListItemPosition = firstListItemPosition + listView.getChildCount() - 1;
+
+        if (position < firstListItemPosition || position > lastListItemPosition ) {
+            return listView.getAdapter().getView(position, listView.getChildAt(position), listView);
+        } else {
+            final int childIndex = position - firstListItemPosition;
+            return listView.getChildAt(childIndex);
+        }
     }
 
     private class ApiSimulator extends AsyncTask<Void, Void, List<CalendarDay>> {
