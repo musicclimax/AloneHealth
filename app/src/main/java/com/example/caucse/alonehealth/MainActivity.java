@@ -68,6 +68,7 @@ public class MainActivity extends AppCompatActivity{
     Button startbutton; //운동 시작 버튼
     String selectedDate;  //선택된 날짜
     String selectedItemId;  //리스트에서 선택된 아이디값
+    String selectedExerciseId;
     String selectedEN;              //운동 이름
     int selectedSet;                //운동의 세트수
     int selectednumber;             //세트 횟수
@@ -219,7 +220,7 @@ public class MainActivity extends AppCompatActivity{
                                     public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
                                         {
                                             cal_listView.refreshDrawableState();
-                                            if(preSelectPos != i)
+                                            if(preSelectPos != i && ((ScheduleData)adapterView.getItemAtPosition(i)).getIsDone() == 0)
                                             {
                                                 preSelectPos = i;
                                                 startbutton.setVisibility(View.VISIBLE);
@@ -227,12 +228,12 @@ public class MainActivity extends AppCompatActivity{
                                                 {
                                                     if(iCnt == i)
                                                     {
-                                                        getViewByPosition(iCnt,cal_listView).setBackgroundColor(Color.GREEN);
+                                                        getViewByPosition(iCnt,cal_listView).setBackgroundColor(Color.rgb(255,255,0));
                                                         //선택된 날짜 및 아이디값 셋팅
                                                         ScheduleData temp = (ScheduleData)adapterView.getItemAtPosition(i);
                                                         selectedItemId = temp.getId();
-
-                                                        selectedEN = temp.getExercise_id();
+                                                        selectedExerciseId = temp.getExercise_id();
+                                                        selectedEN = SQLiteManager.sqLiteManager.selectExerciseNameFromId(temp.getExercise_id());
                                                         selectedSet = temp.getSet();
                                                         selectednumber = temp.getNumber();
                                                     }
@@ -320,12 +321,19 @@ public class MainActivity extends AppCompatActivity{
                 }
                 else if(action == MotionEvent.ACTION_UP){
                     startbutton.setBackgroundResource(R.drawable.startbutton);
+                    Intent intent = new Intent(getApplicationContext(),
+                            ExerciseShotActivity.class);
+                    intent.putExtra("Exercise", selectedEN);
+                    intent.putExtra("Set", selectedSet);
+                    intent.putExtra("Number", selectednumber);
+                    startActivity(intent);
+
 
                     /**
                      * 운동시작화면으로 이동 로직 추가
                      */
                     //운동 실행결과 갱신 - 임시
-                    if(SQLiteManager.sqLiteManager.updateScheduleData(new ScheduleData(selectedItemId,selectedDate,selectedItemId,selectedSet,selectednumber,1))) {
+                    if(SQLiteManager.sqLiteManager.updateScheduleData(new ScheduleData(selectedItemId,selectedDate,selectedExerciseId,selectedSet,selectednumber,1))) {
                         //Toast.makeText(getContext(), "성공적으로 수정되었습니다..", Toast.LENGTH_SHORT).show();
                         cal_adapter.setListViewItemList(SQLiteManager.sqLiteManager.selectScheduleFromDate(selectedDate));
                         cal_adapter.notifyDataSetChanged();
