@@ -56,4 +56,14 @@ Java_com_example_caucse_alonehealth_PictureSamplingTest_InvertMat(JNIEnv *env, j
     Mat &matResult = *(Mat *)matAddrResult;
     flip(matInput,matResult,1);
 
+}extern "C"
+JNIEXPORT void JNICALL
+Java_com_example_caucse_alonehealth_ExerciseShotActivity_InvertMat(JNIEnv *env, jobject instance,
+                                                                   jlong matAddrInput,
+                                                                   jlong matAddrResult) {
+
+    // TODO
+    Mat &matInput = *(Mat *)matAddrInput;
+    Mat &matResult = *(Mat *)matAddrResult;
+    flip(matInput,matResult,1);
 }
