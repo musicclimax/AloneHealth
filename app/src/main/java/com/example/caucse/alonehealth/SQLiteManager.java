@@ -61,7 +61,7 @@ class ScheduleData{
     private int set;
     private int number;
     private boolean isDone;
-
+    
     ScheduleData(){}
     ScheduleData(String id, String date, String Exercise_id, int set, int number, int isDone){
         this.id = id;

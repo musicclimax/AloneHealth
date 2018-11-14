@@ -239,11 +239,16 @@ public class ExerciseShotActivity extends AppCompatActivity
                             timerThread4.start();
                             break;
                         case END_SAMPLING:
+                            progress = TOWARD_SAMPLING;
+                            tts.speak(String.format("표본 추출이 완료되었습니다.",samplingInterval), TextToSpeech.QUEUE_FLUSH, null);
+                            TimerThread timerThread5 = new TimerThread();
+                            count = samplingInterval + 1;
+                            timerThread5.start();
+                            break;
+                        case TOWARD_SAMPLING:
                             min_distance = compareFeature(mStartSample,mEndSample);
                             tts.speak(String.format("운동을 시작해주세요."), TextToSpeech.QUEUE_FLUSH, null);
                             progress = TOWARD_EXERCISE;
-                            break;
-                        case TOWARD_SAMPLING:
                             break;
                         case TOWARD_EXERCISE:
                             if(exercise_count >= num){
