@@ -4,48 +4,29 @@ import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Matrix;
-import android.graphics.drawable.BitmapDrawable;
-import android.media.audiofx.AudioEffect;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.Button;
+import android.widget.TextView;
+
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
-import org.opencv.android.Utils;
-import org.opencv.core.DMatch;
 import org.opencv.core.Mat;
-import org.opencv.core.MatOfDMatch;
 import org.opencv.core.MatOfKeyPoint;
-import org.opencv.core.Scalar;
-import org.opencv.features2d.DescriptorExtractor;
-import org.opencv.features2d.DescriptorMatcher;
-import org.opencv.features2d.FeatureDetector;
-import org.opencv.features2d.Features2d;
-import org.opencv.imgcodecs.Imgcodecs;
 
-import android.support.v7.app.AlertDialog;
-import android.widget.Button;
-import android.widget.ImageView;
-import android.widget.TextView;
-
-import static org.opencv.core.Core.flip;
-
-
-public class PictureSamplingTest extends AppCompatActivity
+public class DifferenceImageTest extends AppCompatActivity
         implements CameraBridgeViewBase.CvCameraViewListener2 {
 
     private static final String TAG = "opencv";
@@ -54,19 +35,14 @@ public class PictureSamplingTest extends AppCompatActivity
     private Mat matGray;
     private Mat matInput;
     //딜레이 카운트
-    private int count = 7;
+    private int count = 0;
     //쓰레드 핸들러
     Handler mHandler = null;
-    //타이머 쓰레드
-    TimerThread timerThread;
     //표본 Mat
     private Mat matStartSample;
     private Mat matEndSample;
-    private Mat matStartImage;
-    private Mat matEndImage;
-    private MatOfKeyPoint matStartKey;
-    private MatOfKeyPoint matEndKey;
-    int min_distance = Integer.MAX_VALUE;
+    private Mat matDifference = new Mat();
+    int max_difference = 0;
     // 테스트 View
     private TextView stateTextView;
     private TextView imageSwitch;
@@ -79,6 +55,9 @@ public class PictureSamplingTest extends AppCompatActivity
     private final static int START_STATE = 0;
     private final static int SAMPLING_STATE = 1;
     private final static int END_STATE = 2;
+    private final static int READY_STATE = 3;
+    private final static int COUNT_STATE = 4;
+    private final static int FINAL_STATE = 5;
     int testState;
     // 테스트 COUNT 시간
     private final static int PREPARE_COUNT = 3;
@@ -87,11 +66,20 @@ public class PictureSamplingTest extends AppCompatActivity
     private int testResultState;
     private final static int START_RESULT = 0;
     private final static int END_RESULT = 1;
+    private final static int DIFF_RESULT = 2;
+    private String log = new String();
+
+    // COUNTING 테스트 STATE
+    private int countState;
+    private final static int START_COUNTING = 0;
+    private final static int END_COUNTING = 1;
 
 
 
     public native void ConvertRGBtoGray(long matAddrInput, long matAddrResult);
     public native void InvertMat(long matAddrInput, long matAddrResult);
+    public native int CountWhitePixels(long matAddrInput);
+    public native void CreateDifferenceImage(long matAddrSource, long matAddrTarget, long matAddrResult);
 
 
     static {
@@ -146,6 +134,7 @@ public class PictureSamplingTest extends AppCompatActivity
         /** Initialize */
         testState = INIT_STATE;
         testResultState = START_STATE;
+        countState = START_COUNTING;
         //View Instance 생성
         imageSwitch = (TextView)findViewById(R.id.switch_image);
         stateTextView = (TextView)findViewById(R.id.state_text);
@@ -159,17 +148,32 @@ public class PictureSamplingTest extends AppCompatActivity
             @Override
             public void onClick(View v) {
                 //테스트 STATE 변경
-                testState = START_STATE;
-                stateTextView.setText("시작 단계");
-                //버튼 숨기기
-                startButton.setVisibility(View.GONE);
-                //카운트 보이기
-                countTextVeiw.setVisibility(View.VISIBLE);
-                countTextVeiw.setText(String.valueOf(PREPARE_COUNT));
-                //타이머 쓰레드 시작
-                TimerThread timerThread = new TimerThread(PREPARE_COUNT);
-                timerThread.setDaemon(true);
-                timerThread.start();
+                if(testState == INIT_STATE) {
+                    testState = START_STATE;
+                    stateTextView.setText("시작 단계");
+                    //버튼 숨기기
+                    startButton.setVisibility(View.GONE);
+                    //카운트 보이기
+                    countTextVeiw.setVisibility(View.VISIBLE);
+                    countTextVeiw.setText(String.valueOf(PREPARE_COUNT));
+                    //타이머 쓰레드 시작
+                    TimerThread timerThread = new TimerThread(PREPARE_COUNT);
+                    timerThread.setDaemon(true);
+                    timerThread.start();
+                }
+                else if(testState == END_STATE){
+                    testState = READY_STATE;
+                    stateTextView.setText("카운트 단계");
+                    //버튼 숨기기
+                    startButton.setVisibility(View.INVISIBLE);
+                    logTextView.setVisibility(View.INVISIBLE);
+                    logSwitch.setVisibility(View.INVISIBLE);
+                    imageSwitch.setVisibility(View.INVISIBLE);
+                    countTextVeiw.setVisibility(View.VISIBLE);
+                    countTextVeiw.setText("");
+                    TimerThread timerThread = new TimerThread(PREPARE_COUNT);
+                    timerThread.start();
+                }
             }
         });
 
@@ -182,7 +186,11 @@ public class PictureSamplingTest extends AppCompatActivity
                     testResultState = END_RESULT;
                     stateTextView.setText("끝 자세 표본");
                 }
-                else {
+                else if(testResultState == END_RESULT) {
+                    testResultState = DIFF_RESULT;
+                    stateTextView.setText("표본 차영상");
+                }
+                else if(testResultState == DIFF_RESULT){
                     testResultState = START_RESULT;
                     stateTextView.setText("시작 자세 표본");
                 }
@@ -201,42 +209,64 @@ public class PictureSamplingTest extends AppCompatActivity
         });
 
         //UI처리 쓰레드 핸들러
-       mHandler = new Handler(){
-          public void handleMessage(Message msg){
+        mHandler = new Handler(){
+            public void handleMessage(Message msg){
 
-              switch(testState){
-                  case INIT_STATE:
-                      break;
-                  case START_STATE:
-                      if(msg.what != 0)
-                          countTextVeiw.setText(String.valueOf(msg.what));
-                      else {
-                          testState = SAMPLING_STATE;
-                          stateTextView.setText("표본 추출 단계");
-                          countTextVeiw.setText(String.format("표본 추출중 %d",SAMPLING_COUNT));
-                          TimerThread timerThread = new TimerThread(SAMPLING_COUNT);
-                          timerThread.setDaemon(true);
-                          timerThread.start();
-                      }
-                      break;
-                  case SAMPLING_STATE:
-                      if(msg.what != 0)
-                          countTextVeiw.setText(String.format("표본 추출중 %d",msg.what));
-                      else{
-                          testState = END_STATE;
-                          stateTextView.setText("표본 추출 완료");
-                          countTextVeiw.setVisibility(View.GONE);
-                          imageSwitch.setVisibility(View.VISIBLE);
-                          logSwitch.setVisibility(View.VISIBLE);
-                          logTextView.setVisibility(View.VISIBLE);
-                          logTextView.setText(String.format("Distance : %d\n",min_distance));
-                      }
-                      break;
-                  case END_STATE:
-                      break;
-              }
+                switch(testState){
+                    case INIT_STATE:
+                        break;
+                    case START_STATE:
+                        if(msg.what != -1)
+                            countTextVeiw.setText(String.valueOf(msg.what));
+                        else {
+                            testState = SAMPLING_STATE;
+                            stateTextView.setText("표본 추출 단계");
+                            countTextVeiw.setText(String.format("표본 추출중 %d",SAMPLING_COUNT));
+                            TimerThread timerThread = new TimerThread(SAMPLING_COUNT);
+                            timerThread.setDaemon(true);
+                            timerThread.start();
+                        }
+                        break;
+                    case SAMPLING_STATE:
+                        if(msg.what != -1) {
+                            countTextVeiw.setText(String.format("표본 추출중 %d", msg.what));
+                        }
+                        else{
+                            stateTextView.setText("표본 추출 완료");
+                            countTextVeiw.setVisibility(View.GONE);
+                            imageSwitch.setVisibility(View.VISIBLE);
+                            logSwitch.setVisibility(View.VISIBLE);
+                            logTextView.setVisibility(View.VISIBLE);
+                            logTextView.setText(log + String.format("MaxDifference : %d",max_difference));
+                            testState=END_STATE;
+                        }
+                        break;
+                    case END_STATE:
+                        break;
+                    case READY_STATE:
+                        if(msg.what != -1){
+                            countTextVeiw.setText(""+msg.what);
+                        }
+                        else{
+                            testState = COUNT_STATE;
+                            countTextVeiw.setText("START");
+                        }
+                        break;
+                    case COUNT_STATE:
+                        stateTextView.setText("MAX : " + (int)(max_difference/5) + " Difference : " + msg.what + " STATE : " + countState);
+                        if(count != 10){
+                            countTextVeiw.setText(""+count);
+                        }
+                        else{
+                            testState = FINAL_STATE;
+                            countTextVeiw.setText("THE END");
+                        }
+                        break;
+                    case FINAL_STATE:
+                        break;
+                }
 
-          }
+            }
         };
     }
 
@@ -297,11 +327,7 @@ public class PictureSamplingTest extends AppCompatActivity
                 break;
             case SAMPLING_STATE:
                 if(matStartSample == null){
-                    matStartKey = detectKeyPoint(matGray);
-                    matStartSample = extractDescriptor(matGray, matStartKey);
-                    matStartImage = new Mat();
-                    matEndImage = new Mat();
-                    Features2d.drawKeypoints(matGray, matStartKey, matStartImage, new Scalar(0, 255, 0), 0);
+                    matStartSample = matGray.clone();
                 }
                 else{
                     SampingThread sampingThread = new SampingThread();
@@ -309,10 +335,16 @@ public class PictureSamplingTest extends AppCompatActivity
                 }
                 break;
             case END_STATE:
-                if(testResultState == START_STATE)
-                    return matStartImage;
+                if(testResultState == START_RESULT)
+                    return matStartSample;
+                else if(testResultState == END_RESULT)
+                    return matEndSample;
                 else
-                    return matEndImage;
+                    return matDifference;
+            case COUNT_STATE:
+                CountingThread countingThread = new CountingThread();
+                countingThread.start();
+                break;
         }
 
 
@@ -369,7 +401,7 @@ public class PictureSamplingTest extends AppCompatActivity
     @TargetApi(Build.VERSION_CODES.M)
     private void showDialogForPermission(String msg) {
 
-        AlertDialog.Builder builder = new AlertDialog.Builder( PictureSamplingTest.this);
+        AlertDialog.Builder builder = new AlertDialog.Builder( DifferenceImageTest.this);
         builder.setTitle("알림");
         builder.setMessage(msg);
         builder.setCancelable(false);
@@ -401,83 +433,55 @@ public class PictureSamplingTest extends AppCompatActivity
                 }
                 count --;
             }
-            mHandler.sendEmptyMessage(count);
+            mHandler.sendEmptyMessage(-1);
         }
     }
     public class SampingThread extends Thread{
         public synchronized void run(){
             if(testState == SAMPLING_STATE) {
-                MatOfKeyPoint matOfKeyPoint= detectKeyPoint(matGray);
-                Mat matCandidate = extractDescriptor(matGray, matOfKeyPoint);
-                int distance;
-                //**표본추출 시작*//*
-                distance = compareFeature(matStartSample, matCandidate);
-                Log.d("min : ",String.valueOf(min_distance));
-                if (distance < min_distance) {
-                    min_distance = distance;
-                    matEndSample = matCandidate;
-                    matEndKey = matOfKeyPoint;
-                    Features2d.drawKeypoints(matGray, matEndKey, matEndImage, new Scalar(0, 255, 0), 0);
+                Mat matDiff = new Mat(matGray.rows(), matGray.cols(), matGray.type());
+                CreateDifferenceImage(matGray.getNativeObjAddr(),matStartSample.getNativeObjAddr(),matDiff.getNativeObjAddr());
+                int difference = CountWhitePixels(matDiff.getNativeObjAddr());
+                log += String.format("Difference : %d ",difference);
 
+                if (difference > max_difference) {
+                    max_difference = difference;
+                    matDifference = matDiff.clone();
+                    matEndSample = matGray.clone();
                 }
             }
         }
     }
-    //ORB Feature 추출
-    public MatOfKeyPoint detectKeyPoint(Mat mSource){
-        MatOfKeyPoint keyPoint = new MatOfKeyPoint();
-        FeatureDetector detector = FeatureDetector.create(FeatureDetector.ORB);
-        detector.detect(mSource,keyPoint);
-        return keyPoint;
-    }
-    public Mat extractDescriptor(Mat mSource, MatOfKeyPoint keyPoint){
-        Mat mResult = new Mat();
-        DescriptorExtractor extractor = DescriptorExtractor.create(DescriptorExtractor.ORB);
-        extractor.compute(mSource,keyPoint,mResult);
-        return mResult;
-    }
-    public static int compareFeature(Mat mSource, Mat mTarget) {
-        int retVal = 0;
 
-        // Definition of descriptor matcher
-        DescriptorMatcher matcher = DescriptorMatcher.create(DescriptorMatcher.BRUTEFORCE_HAMMING);
-
-        // Match points of two images
-        MatOfDMatch matches = new MatOfDMatch();
-        //  System.out.println("Type of Image1= " + descriptors1.type() + ", Type of Image2= " + descriptors2.type());
-        //  System.out.println("Cols of Image1= " + descriptors1.cols() + ", Cols of Image2= " + descriptors2.cols());
-
-        // Avoid to assertion failed
-        // Assertion failed (type == src2.type() && src1.cols == src2.cols && (type == CV_32F || type == CV_8U)
-        if (mTarget.cols() == mSource.cols()) {
-            matcher.match(mTarget, mSource ,matches);
-
-            // Check matches of key points
-            DMatch[] match = matches.toArray();
-
-            /*
-            double max_dist = 0; double min_dist = 100;
-
-            for (int i = 0; i < mSource.rows(); i++) {
-                double dist = match[i].distance;
-                if( dist < min_dist ) min_dist = dist;
-                if( dist > max_dist ) max_dist = dist;
-            }
-            System.out.println("max_dist=" + max_dist + ", min_dist=" + min_dist);
-            */
-
-            // Extract good images (distances are under 10)
-            for (int i = 0; i < mSource.rows(); i++) {
-                if (match[i].distance <= 10) {
-                    retVal++;
-                }
+    public class CountingThread extends Thread{
+        public void run(){
+            if(testState == COUNT_STATE) {
+                countUsingDiff();
             }
         }
-
-        return retVal;
     }
-    // 차영상
-
+    public synchronized void countUsingDiff(){
+        Mat matDiff;
+        int difference = 0;
+        if(countState == START_COUNTING){
+            matDiff = new Mat(matGray.rows(), matGray.cols(), matGray.type());
+            CreateDifferenceImage(matGray.getNativeObjAddr(), matEndSample.getNativeObjAddr(), matDiff.getNativeObjAddr());
+            difference = CountWhitePixels(matDiff.getNativeObjAddr());
+            if(difference < max_difference / 10){
+                countState = END_COUNTING;
+            }
+        }
+        else if(countState == END_COUNTING){
+            matDiff = new Mat(matGray.rows(), matGray.cols(), matGray.type());
+            CreateDifferenceImage(matGray.getNativeObjAddr(), matStartSample.getNativeObjAddr(), matDiff.getNativeObjAddr());
+            difference = CountWhitePixels(matDiff.getNativeObjAddr());
+            if(difference < max_difference / 10){
+                count++;
+                countState = START_COUNTING;
+            }
+        }
+        mHandler.sendEmptyMessage(difference);
+    }
 
 
 }
