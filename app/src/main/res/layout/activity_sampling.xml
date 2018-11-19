@@ -9,15 +9,50 @@
         android:id = "@+id/sampling_camera_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
+    <TextView
+        android:layout_width="100dp"
+        android:layout_height="35dp"
+        android:id = "@+id/switch_image"
+        android:text = "사진전환"
+        android:layout_gravity="top|left"
+        android:background="#AAAAAA"
+        android:layout_marginLeft="10dp"
+        android:layout_marginTop="10dp"
+        android:textSize="20dp"
+        android:gravity="center_vertical|center_horizontal"
+        android:textAlignment="gravity"
+        android:visibility="invisible"/>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="35dp"
+        android:id = "@+id/state_text"
+        android:text="현재 상태"
+        android:layout_gravity="top|center"
+        android:layout_marginTop="10dp"
+        android:textSize="20dp"
+        android:gravity="center_vertical|center_horizontal"
+        android:textAlignment="gravity"/>
+    <TextView
+        android:layout_width="100dp"
+        android:layout_height="35dp"
+        android:id = "@+id/switch_log"
+        android:text = "로그보기"
+        android:layout_gravity="top|right"
+        android:background="#AAAAAA"
+        android:layout_marginRight="10dp"
+        android:layout_marginTop="10dp"
+        android:textSize="20dp"
+        android:gravity="center_vertical|center_horizontal"
+        android:textAlignment="gravity"
+        android:visibility="invisible"/>
     <Button
         android:id = "@+id/start_test_button"
         android:layout_width="100dp"
         android:layout_height="100dp"
         android:background="@drawable/start_test_button"
-        android:layout_gravity="center"/>
-
+        android:layout_gravity="center_vertical|center_horizontal"/>
     <TextView
-        android:id = "@+id/state_test_text"
+        android:id = "@+id/count_text"
         android:layout_width="wrap_content"
         android:layout_height="100dp"
         android:background = "#00000000"
@@ -27,22 +62,12 @@
         android:gravity="center"
         android:textAlignment="gravity"
         android:visibility="invisible"/>
-    <ImageView
-        android:id = "@+id/test_result_start"
-        android:layout_width="200dp"
+    <TextView
+        android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:visibility="invisible"
-        android:layout_gravity="top"
-        />
-    <ImageView
-        android:id = "@+id/test_result_end"
-        android:layout_width="200dp"
-        android:layout_height="match_parent"
-        android:visibility="invisible"
-        android:layout_gravity="bottom"
-        android:layout_marginLeft="400dp"/>
-
-
-
+        android:id = "@+id/log_text"
+        android:layout_marginTop="55dp"
+        android:background="#55FFFFFF"
+        android:visibility="invisible"/>
 
 </FrameLayout>
