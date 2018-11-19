@@ -74,11 +74,21 @@ public class DifferenceImageTest extends AppCompatActivity
     private final static int START_COUNTING = 0;
     private final static int END_COUNTING = 1;
 
+    //Thread <-> Frame Test
+    private int NumberOfThread = 0;
+    private int NumberOfFrame = 0;
+    private long countEnd = 0;
+    private long msgEnd = 0;
+    //Circular Queue
+    MatCirCularQueue frameBuffer;
+
+
 
 
     public native void ConvertRGBtoGray(long matAddrInput, long matAddrResult);
     public native void InvertMat(long matAddrInput, long matAddrResult);
     public native int CountWhitePixels(long matAddrInput);
+    public native int CountWhitePixelsInOneRow(long matAddrInput, int indexOfStart, int indexOfEnd);
     public native void CreateDifferenceImage(long matAddrSource, long matAddrTarget, long matAddrResult);
 
 
@@ -135,6 +145,7 @@ public class DifferenceImageTest extends AppCompatActivity
         testState = INIT_STATE;
         testResultState = START_STATE;
         countState = START_COUNTING;
+        frameBuffer = new MatCirCularQueue();
         //View Instance 생성
         imageSwitch = (TextView)findViewById(R.id.switch_image);
         stateTextView = (TextView)findViewById(R.id.state_text);
@@ -238,6 +249,7 @@ public class DifferenceImageTest extends AppCompatActivity
                             logSwitch.setVisibility(View.VISIBLE);
                             logTextView.setVisibility(View.VISIBLE);
                             logTextView.setText(log + String.format("MaxDifference : %d",max_difference));
+                            startButton.setVisibility(View.VISIBLE);
                             testState=END_STATE;
                         }
                         break;
@@ -250,14 +262,18 @@ public class DifferenceImageTest extends AppCompatActivity
                         else{
                             testState = COUNT_STATE;
                             countTextVeiw.setText("START");
+                            mHandler.sendEmptyMessage(0);
                         }
                         break;
                     case COUNT_STATE:
                         stateTextView.setText("MAX : " + (int)(max_difference/5) + " Difference : " + msg.what + " STATE : " + countState);
-                        if(count != 10){
+                        if(count < 5){
                             countTextVeiw.setText(""+count);
+                            msgEnd = System.currentTimeMillis();
+                            Log.d(TAG, String.format("--------------------\ncount <-> msg intervasl : %d",msgEnd - countEnd));
                         }
                         else{
+                            Log.d(TAG, String.format("--------------------\nTest END\nThread : %d\nFrame : %d",NumberOfThread,NumberOfFrame));
                             testState = FINAL_STATE;
                             countTextVeiw.setText("THE END");
                         }
@@ -342,6 +358,8 @@ public class DifferenceImageTest extends AppCompatActivity
                 else
                     return matDifference;
             case COUNT_STATE:
+                NumberOfFrame ++;
+                frameBuffer.Enqueue(matGray);
                 CountingThread countingThread = new CountingThread();
                 countingThread.start();
                 break;
@@ -455,32 +473,79 @@ public class DifferenceImageTest extends AppCompatActivity
 
     public class CountingThread extends Thread{
         public void run(){
+            long start = System.currentTimeMillis();
+            Log.d(TAG, String.format("Thread %d : start",this.getId()));
             if(testState == COUNT_STATE) {
                 countUsingDiff();
             }
+            long end = System.currentTimeMillis();
+            NumberOfThread++;
+            Log.d(TAG, String.format("Thread %d : end\n Thread Time : %d",this.getId(),end-start));
         }
     }
-    public synchronized void countUsingDiff(){
-        Mat matDiff;
-        int difference = 0;
+    public void countUsingDiff(){
+        Mat matFrame = frameBuffer.Dequeue();
+        Mat matStartDiff= new Mat(matFrame.rows(), matFrame.cols(), matFrame.type());
+        Mat matEndDiff= new Mat(matFrame.rows(), matFrame.cols(), matFrame.type());
+        long start = System.currentTimeMillis();
+        CreateDifferenceImage(matFrame.getNativeObjAddr(), matEndSample.getNativeObjAddr(), matEndDiff.getNativeObjAddr());
+        CreateDifferenceImage(matFrame.getNativeObjAddr(), matStartSample.getNativeObjAddr(), matStartDiff.getNativeObjAddr());
+        long end = System.currentTimeMillis();
+        Log.d(TAG,String.format("CreateDifferenceImage time : %d",end - start));
+        start = System.currentTimeMillis();
+        int differenceWithStart = sumOfWhitePixels(matStartDiff,8);
+        int differenceWithEnd = sumOfWhitePixels(matEndDiff,8);
+        end = System.currentTimeMillis();
+        Log.d(TAG,String.format("CountWhitePixels time : %d",end-start));
+        counting(differenceWithStart,differenceWithEnd);
+    }
+    private synchronized void counting(int differenceWithStart, int differenceWithEnd){
         if(countState == START_COUNTING){
-            matDiff = new Mat(matGray.rows(), matGray.cols(), matGray.type());
-            CreateDifferenceImage(matGray.getNativeObjAddr(), matEndSample.getNativeObjAddr(), matDiff.getNativeObjAddr());
-            difference = CountWhitePixels(matDiff.getNativeObjAddr());
-            if(difference < max_difference / 10){
+            if(differenceWithEnd < max_difference / 5){
                 countState = END_COUNTING;
             }
+
         }
         else if(countState == END_COUNTING){
-            matDiff = new Mat(matGray.rows(), matGray.cols(), matGray.type());
-            CreateDifferenceImage(matGray.getNativeObjAddr(), matStartSample.getNativeObjAddr(), matDiff.getNativeObjAddr());
-            difference = CountWhitePixels(matDiff.getNativeObjAddr());
-            if(difference < max_difference / 10){
+            if(differenceWithStart < max_difference / 5){
                 count++;
                 countState = START_COUNTING;
+                mHandler.sendEmptyMessage(differenceWithStart);
+                countEnd = System.currentTimeMillis();
             }
         }
-        mHandler.sendEmptyMessage(difference);
+    }
+    class CountPixelThread extends Thread{
+        int indexOfStart;
+        int indexOfEnd;
+        long matInput;
+        int ans;
+        CountPixelThread(long matInput, int start, int end){ this.matInput = matInput; this.indexOfStart = start; this.indexOfEnd = end; this.ans = 0;}
+
+        @Override
+        public void run() {
+            this.ans = CountWhitePixelsInOneRow(matInput,indexOfStart,indexOfEnd);
+        }
+
+    }
+    private int sumOfWhitePixels(Mat mSource, int numberOfThread){
+        int sum = 0;
+        CountPixelThread countPixelThread[] = new CountPixelThread[numberOfThread];
+        for(int i = 0; i < numberOfThread; i ++){
+            countPixelThread[i] = new CountPixelThread(mSource.getNativeObjAddr(),(i*mSource.rows())/numberOfThread,((i+1)*mSource.rows())/numberOfThread);
+            countPixelThread[i].start();
+        }
+        for(int i = 0; i < numberOfThread; i++){
+            try {
+                countPixelThread[i].join();
+                sum += countPixelThread[i].ans;
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+        }
+
+        return sum;
     }
 
 

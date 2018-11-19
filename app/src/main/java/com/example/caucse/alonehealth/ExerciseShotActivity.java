@@ -22,27 +22,15 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
-import org.opencv.core.DMatch;
 import org.opencv.core.Mat;
-import org.opencv.core.MatOfDMatch;
-import org.opencv.core.MatOfKeyPoint;
-import org.opencv.core.Scalar;
-import org.opencv.features2d.DescriptorExtractor;
-import org.opencv.features2d.DescriptorMatcher;
-import org.opencv.features2d.FeatureDetector;
-import org.opencv.features2d.Features2d;
-import org.opencv.features2d.ORB;
 
 import java.util.Locale;
 
 import static android.speech.tts.TextToSpeech.ERROR;
-import static org.opencv.core.Core.flip;
-import static org.opencv.core.Core.min;
 
 public class ExerciseShotActivity extends AppCompatActivity
         implements CameraBridgeViewBase.CvCameraViewListener2 {
@@ -52,6 +40,7 @@ public class ExerciseShotActivity extends AppCompatActivity
     private Mat matInversion;
     private Mat matGray;
     private Mat matInput;
+    MatCirCularQueue frameBuffer;
     //테스트 시작 버튼
     private Button startTestButton;
     //테스트 로그 텍스트뷰
@@ -65,7 +54,7 @@ public class ExerciseShotActivity extends AppCompatActivity
     //표본 Mat
     private Mat mStartSample;
     private Mat mEndSample;
-    int min_distance = Integer.MAX_VALUE;
+    int max_difference = 0;
     // 운동 진행 state
     int progress = -1;
     private final static int START_EXERCISE = 0;
@@ -81,7 +70,6 @@ public class ExerciseShotActivity extends AppCompatActivity
     TextView exercisetext, settext;
     TextView currentSetNumberTextView;
     TextToSpeech tts;
-    ORB orb;
     int set, num;
     String exercise;
 
@@ -91,14 +79,17 @@ public class ExerciseShotActivity extends AppCompatActivity
     int setInterval = 10;
 
     //운동 카운트 플래그
-    boolean isFirstPosition = false;
-    boolean isLastPosition = true;
+    boolean isFirstPosition = true;
+    boolean isLastPosition = false;
     int exercise_count = 0;
     int exercise_set = 0;
 
 
     public native void ConvertRGBtoGray(long matAddrInput, long matAddrResult);
     public native void InvertMat(long matAddrInput, long matAddrResult);
+    public native int CountWhitePixels(long matAddrInput);
+    public native void CreateDifferenceImage(long matAddrSource, long matAddrTarget, long matAddrResult);
+    public native int CountWhitePixelsInOneRow(long matAddrInput, int indexOfStart, int indexOfEnd);
     static {
         System.loadLibrary("opencv_java3");
         System.loadLibrary("native-lib");
@@ -129,7 +120,7 @@ public class ExerciseShotActivity extends AppCompatActivity
                 WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         setContentView(R.layout.activity_shot);
-
+        frameBuffer = new MatCirCularQueue();
         //운동 이름 text view
         exercisetext = (TextView) findViewById(R.id.exercisetext);
         //운동 set 수 text view
@@ -246,7 +237,9 @@ public class ExerciseShotActivity extends AppCompatActivity
                             timerThread5.start();
                             break;
                         case TOWARD_SAMPLING:
-                            min_distance = compareFeature(mStartSample,mEndSample);
+                            Mat matDiff = new Mat(matGray.rows(), matGray.cols(), matGray.type());
+                            CreateDifferenceImage(mStartSample.getNativeObjAddr(), mEndSample.getNativeObjAddr(), matDiff.getNativeObjAddr());
+                            max_difference = CountWhitePixels(matDiff.getNativeObjAddr());
                             tts.speak(String.format("운동을 시작해주세요."), TextToSpeech.QUEUE_FLUSH, null);
                             progress = TOWARD_EXERCISE;
                             break;
@@ -350,18 +343,19 @@ public class ExerciseShotActivity extends AppCompatActivity
                 case START_EXERCISE:
                     break;
                 case START_SAMPLING:
-                    mStartSample = extractDescriptor(matGray);
+                    mStartSample = matGray.clone();
                     break;
                 case END_SAMPLING:
-                    mEndSample = extractDescriptor(matGray);
+                    mEndSample = matGray.clone();
                     break;
                 case TOWARD_SAMPLING:
                 /*SamplingThread samplingThread = new SamplingThread();
                 samplingThread.start();*/
                     break;
                 case TOWARD_EXERCISE:
-                    CompareThread compareThread = new CompareThread();
-                    compareThread.start();
+                    frameBuffer.Enqueue(matGray);
+                    CountingThread countingThread = new CountingThread();
+                    countingThread.start();
                     break;
             }
         }
@@ -441,100 +435,81 @@ public class ExerciseShotActivity extends AppCompatActivity
             mHandler.sendEmptyMessage(0);
         }
     }
-    public class SamplingThread extends Thread{
+
+    public class CountingThread extends Thread{
         public void run(){
-                Mat matCandidate = extractDescriptor(matGray);
-                int distance;
-                /**표본추출 시작*/
-                distance = compareFeature(mStartSample, matCandidate);
-                Log.d("min : ",String.valueOf(min_distance));
-                if (distance < min_distance && distance != 0) {
-                    min_distance = distance;
-                    mEndSample = matCandidate;
-                }
+            if(progress == TOWARD_EXERCISE) {
+                countUsingDiff();
+            }
         }
     }
-    public class CompareThread extends Thread{
-        public synchronized void run(){
-            Mat matCandidate = extractDescriptor(matGray);
-            int distance;
-            if(isFirstPosition){
-                distance = compareFeature(mEndSample,matCandidate);
-                if(distance <= min_distance*1.1 && distance >= min_distance*0.9){
-                    isFirstPosition = false;
-                    isLastPosition = true;
-                    exercise_count++;
-                    tts.speak(String.format("%d",exercise_count), TextToSpeech.QUEUE_FLUSH, null);
-                    if(exercise_count >= num){
-                        TimerThread timerThread = new TimerThread();
-                        count = 2;
-                        timerThread.start();
-                    }
-                    else
-                        mHandler.sendEmptyMessage(0);
-                }
-            }
-            else if(isLastPosition){
-                distance = compareFeature(mStartSample,matCandidate);
-                if(distance <= min_distance*1.1 && distance >= min_distance*0.9){
-                    isFirstPosition = true;
-                    isLastPosition = false;
-                }
+    public void countUsingDiff(){
+        Mat matFrame = frameBuffer.Dequeue();
+        Mat matStartDiff= new Mat(matFrame.rows(), matFrame.cols(), matFrame.type());
+        Mat matEndDiff= new Mat(matFrame.rows(), matFrame.cols(), matFrame.type());
+
+        CreateDifferenceImage(matFrame.getNativeObjAddr(), mEndSample.getNativeObjAddr(), matEndDiff.getNativeObjAddr());
+        CreateDifferenceImage(matFrame.getNativeObjAddr(), mStartSample.getNativeObjAddr(), matStartDiff.getNativeObjAddr());
+
+        int differenceWithStart = sumOfWhitePixels(matStartDiff,8);
+        int differenceWithEnd = sumOfWhitePixels(matEndDiff,8);
+        counting(differenceWithStart,differenceWithEnd);
+    }
+    private synchronized void counting(int differenceWithStart, int differenceWithEnd){
+        if(isFirstPosition){
+            if(differenceWithEnd < max_difference / 5){
+                isFirstPosition = false;
+                isLastPosition = true;
             }
 
         }
-    }
-    //ORB Feature 추출
-    public Mat extractDescriptor(Mat mSource){
-        Mat mResult = new Mat();
-        MatOfKeyPoint keyPoint = new MatOfKeyPoint();
-        FeatureDetector detector = FeatureDetector.create(FeatureDetector.ORB);
-        DescriptorExtractor extractor = DescriptorExtractor.create(DescriptorExtractor.ORB);
-        detector.detect(mSource,keyPoint);
-        extractor.compute(mSource,keyPoint,mResult);
-        return mResult;
-    }
-    public int compareFeature(Mat mSource, Mat mTarget) {
-        int retVal = 0;
-
-        // Definition of descriptor matcher
-        DescriptorMatcher matcher = DescriptorMatcher.create(DescriptorMatcher.BRUTEFORCE_HAMMING);
-
-        // Match points of two images
-        MatOfDMatch matches = new MatOfDMatch();
-        //  System.out.println("Type of Image1= " + descriptors1.type() + ", Type of Image2= " + descriptors2.type());
-        //  System.out.println("Cols of Image1= " + descriptors1.cols() + ", Cols of Image2= " + descriptors2.cols());
-
-        // Avoid to assertion failed
-        // Assertion failed (type == src2.type() && src1.cols == src2.cols && (type == CV_32F || type == CV_8U)
-        if (mTarget.cols() == mSource.cols()) {
-            matcher.match(mTarget, mSource ,matches);
-
-            // Check matches of key points
-            DMatch[] match = matches.toArray();
-
-            /*
-            double max_dist = 0; double min_dist = 100;
-
-            for (int i = 0; i < mSource.rows(); i++) {
-                double dist = match[i].distance;
-                if( dist < min_dist ) min_dist = dist;
-                if( dist > max_dist ) max_dist = dist;
-            }
-            System.out.println("max_dist=" + max_dist + ", min_dist=" + min_dist);
-            */
-
-            // Extract good images (distances are under 10)
-            for (int i = 0; i < match.length; i++) {
-                if(match[i] != null) {
-                    if (match[i].distance <= 10) {
-                        retVal++;
-                    }
+        else if(isLastPosition){
+            if(differenceWithStart < max_difference / 5){
+                exercise_count++;
+                isFirstPosition = true;
+                isLastPosition = false;
+                tts.speak(String.format("%d",exercise_count), TextToSpeech.QUEUE_FLUSH, null);
+                if(exercise_count >= num){
+                    TimerThread timerThread = new TimerThread();
+                    count = 2;
+                    timerThread.start();
                 }
+                else
+                    mHandler.sendEmptyMessage(0);
+
             }
         }
-
-        return retVal;
     }
+    class CountPixelThread extends Thread{
+        int indexOfStart;
+        int indexOfEnd;
+        long matInput;
+        int ans;
+        CountPixelThread(long matInput, int start, int end){ this.matInput = matInput; this.indexOfStart = start; this.indexOfEnd = end; this.ans = 0;}
 
+        @Override
+        public void run() {
+            this.ans = CountWhitePixelsInOneRow(matInput,indexOfStart,indexOfEnd);
+        }
+
+    }
+    private int sumOfWhitePixels(Mat mSource, int numberOfThread){
+        int sum = 0;
+        CountPixelThread countPixelThread[] = new CountPixelThread[numberOfThread];
+        for(int i = 0; i < numberOfThread; i ++){
+            countPixelThread[i] = new CountPixelThread(mSource.getNativeObjAddr(),(i*mSource.rows())/numberOfThread,((i+1)*mSource.rows())/numberOfThread);
+            countPixelThread[i].start();
+        }
+        for(int i = 0; i < numberOfThread; i++){
+            try {
+                countPixelThread[i].join();
+                sum += countPixelThread[i].ans;
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+        }
+
+        return sum;
+    }
 }

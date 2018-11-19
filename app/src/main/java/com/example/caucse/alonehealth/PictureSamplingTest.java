@@ -281,7 +281,6 @@ public class PictureSamplingTest extends AppCompatActivity
 
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
-
         matInput = inputFrame.rgba();
         if(matInversion == null)
             matInversion = new Mat(matInput.rows(),matInput.cols(),matInput.type());
