@@ -386,6 +386,7 @@ public class SQLiteManager extends SQLiteOpenHelper {
         }
         return dataResultList;
     }
+
     public ArrayList<String> selectAllExerciseName(){
         ArrayList<String> dataResultList = new ArrayList<String>();
         String sql = "select "+EXERCISE_NAME+" from "+EXERCISE_TABLE_NAME+" ORDER BY "+EXERCISE_ID+" DESC;";
@@ -443,4 +444,19 @@ public class SQLiteManager extends SQLiteOpenHelper {
         return deleteRecordCnt;
     }
 
+
+    //날짜로 CharacterStatData 조회
+    public CharacterStatData selectCharacterStatDataFromDate(String date){
+        CharacterStatData dataResult = new CharacterStatData();
+        String sql = "select * from "+CHARACTER_TABLE_NAME+" where "+ CHARACTER_DATE + " = \'" + date + "\';";
+        Cursor results = db.rawQuery(sql,null);
+
+        if(results.moveToFirst()){
+            CharacterStatData characterstatdata = new CharacterStatData(results.getString(0), results.getInt(1), results.getInt(2), // Date, Chest, Arm
+                    results.getInt(3),results.getInt(4),results.getInt(5),results.getInt(6));  //Abs, Shoulder, back, legs
+
+            dataResult = characterstatdata;
+        }
+        return dataResult;
+    }
 }

@@ -4,8 +4,21 @@ package com.example.caucse.alonehealth;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.LinearGradient;
+import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
+import android.graphics.Shader;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.LayerDrawable;
 import android.graphics.drawable.PaintDrawable;
+import android.graphics.drawable.ShapeDrawable;
+import android.support.v4.content.ContextCompat;
+import android.support.v4.content.res.ResourcesCompat;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -18,6 +31,7 @@ import android.widget.Adapter;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -35,7 +49,7 @@ import java.util.Locale;
 public class MainActivity extends AppCompatActivity{
 
     int bot_state = 0;
-
+    int top_state = 0;
     //터치좌표
     private float x;
     private float y;
@@ -346,6 +360,25 @@ public class MainActivity extends AppCompatActivity{
                 return true;
             }
         });
+
+        //탑프레임레이아웃 터치 이벤트
+        FrameLayout ll_TOP = (FrameLayout)findViewById(R.id.MAIN_FL_UP);
+        ll_TOP.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch(event.getAction()) {
+                    //터치 케이스
+                    case MotionEvent.ACTION_UP:
+                        if (top_state == 0)
+                        {
+                            change_top_view(1);
+                        }
+                }
+                return true;
+            }
+        });
+
+        change_top_view(0);
     }
 
     //리스트뷰에서 포지션위치의 자식을 받아오는 함수
@@ -397,6 +430,180 @@ public class MainActivity extends AppCompatActivity{
                 bot_state = 2;
                 break;
         }
+        //프레임레이아웃에 뷰 추가
+        if(view != null) {
+            frame.addView(view);
+        }
+    }
+
+    private void change_top_view(int index)
+    {
+        //레이아웃인플레터 초기화
+        LayoutInflater inflater = (LayoutInflater)getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+
+        FrameLayout frame = (FrameLayout)findViewById(R.id.MAIN_FL_UP);
+
+        if(frame.getChildCount() > 0)
+        {
+            // 프레임레이아웃에서 뷰 삭제
+            frame.removeViewAt(0);
+        }
+
+        View view = null;
+
+        switch (index){
+            case 0 :    //첫번째 뷰
+                view = inflater.inflate(R.layout.main_top_fir, frame, false);
+                top_state = 0;
+                break;
+            case 1 :    //캐릭터 능력치 뷰
+                view = inflater.inflate(R.layout.main_top_char, frame, false);
+                top_state = 1;
+
+                //텍스트뷰 이벤트
+                TextView arm_text = (TextView)view.findViewById(R.id.arm_data);
+
+                //float xxx = SQLiteManager.sqLiteManager.selectCharacterStatFromLocomotorName();
+
+                arm_text.setOnTouchListener(new View.OnTouchListener(){
+                    @Override
+                    public boolean onTouch(View v, MotionEvent event) {
+                        switch(event.getAction()) {
+                            //터치 케이스
+                            case MotionEvent.ACTION_UP:
+                                ImageView CharView = (ImageView)findViewById(R.id.char_img);
+                                CharView.setImageResource(R.drawable.arm_img);
+
+                                ImageView CharChangeView = (ImageView)findViewById(R.id.char_change_img);
+                                CharChangeView.setImageResource(R.drawable.arm_change_img);
+
+                                Bitmap myBitmap = ((BitmapDrawable)CharChangeView.getDrawable()).getBitmap();
+                                Bitmap newBitmap = addGradient_copper(myBitmap);
+                                CharChangeView.setImageDrawable(new BitmapDrawable(getResources(), newBitmap));
+                        }
+                        return true;
+                    }
+
+                });
+
+                //텍스트뷰 이벤트
+                TextView shoulder_text = (TextView)view.findViewById(R.id.shoulder_data);
+                shoulder_text.setOnTouchListener(new View.OnTouchListener(){
+                    @Override
+                    public boolean onTouch(View v, MotionEvent event) {
+                        switch(event.getAction()) {
+                            //터치 케이스
+                            case MotionEvent.ACTION_UP:
+                                ImageView CharView = (ImageView)findViewById(R.id.char_img);
+                                CharView.setImageResource(R.drawable.shoulder_img);
+
+                                ImageView CharChangeView = (ImageView)findViewById(R.id.char_change_img);
+                                CharChangeView.setImageResource(R.drawable.shoulder_change_img);
+
+                                Bitmap myBitmap = ((BitmapDrawable)CharChangeView.getDrawable()).getBitmap();
+                                Bitmap newBitmap = addGradient_gold(myBitmap);
+                                CharChangeView.setImageDrawable(new BitmapDrawable(getResources(), newBitmap));
+
+                        }
+
+                        return true;
+                    }
+
+                });
+
+                //텍스트뷰 이벤트
+                TextView back_text = (TextView)view.findViewById(R.id.back_data);
+                back_text.setOnTouchListener(new View.OnTouchListener(){
+                    @Override
+                    public boolean onTouch(View v, MotionEvent event) {
+                        switch(event.getAction()) {
+                            //터치 케이스
+                            case MotionEvent.ACTION_UP:
+                                ImageView CharView = (ImageView)findViewById(R.id.char_img);
+                                CharView.setImageResource(R.drawable.back_img);
+
+                                ImageView CharChangeView = (ImageView)findViewById(R.id.char_change_img);
+                                CharChangeView.setImageResource(R.drawable.back_change_img);
+
+                                Bitmap myBitmap = ((BitmapDrawable)CharChangeView.getDrawable()).getBitmap();
+                                Bitmap newBitmap = addGradient_silver(myBitmap);
+                                CharChangeView.setImageDrawable(new BitmapDrawable(getResources(), newBitmap));
+                        }
+                        return true;
+                    }
+
+                });
+
+                //텍스트뷰 이벤트
+                TextView abs_text = (TextView)view.findViewById(R.id.abs_data);
+                abs_text.setOnTouchListener(new View.OnTouchListener(){
+                    @Override
+                    public boolean onTouch(View v, MotionEvent event) {
+                        switch(event.getAction()) {
+                            //터치 케이스
+                            case MotionEvent.ACTION_UP:
+                                ImageView CharView = (ImageView)findViewById(R.id.char_img);
+                                CharView.setImageResource(R.drawable.abs_img);
+
+                                ImageView CharChangeView = (ImageView)findViewById(R.id.char_change_img);
+                                CharChangeView.setImageResource(R.drawable.abs_change_img);
+
+                                Bitmap myBitmap = ((BitmapDrawable)CharChangeView.getDrawable()).getBitmap();
+                                Bitmap newBitmap = addGradient_copper(myBitmap);
+                                CharChangeView.setImageDrawable(new BitmapDrawable(getResources(), newBitmap));
+                        }
+                        return true;
+                    }
+
+                });
+
+                //텍스트뷰 이벤트
+                TextView chest_text = (TextView)view.findViewById(R.id.chest_data);
+                chest_text.setOnTouchListener(new View.OnTouchListener(){
+                    @Override
+                    public boolean onTouch(View v, MotionEvent event) {
+                        switch(event.getAction()) {
+                            //터치 케이스
+                            case MotionEvent.ACTION_UP:
+                                ImageView CharView = (ImageView)findViewById(R.id.char_img);
+                                CharView.setImageResource(R.drawable.chest_img);
+
+                                ImageView CharChangeView = (ImageView)findViewById(R.id.char_change_img);
+                                CharChangeView.setImageResource(R.drawable.chest_change_img);
+
+                                Bitmap myBitmap = ((BitmapDrawable)CharChangeView.getDrawable()).getBitmap();
+                                Bitmap newBitmap = addGradient_gold(myBitmap);
+                                CharChangeView.setImageDrawable(new BitmapDrawable(getResources(), newBitmap));
+                        }
+                        return true;
+                    }
+
+                });
+
+                //텍스트뷰 이벤트
+                TextView legs_text = (TextView)view.findViewById(R.id.legs_data);
+                legs_text.setOnTouchListener(new View.OnTouchListener(){
+                    @Override
+                    public boolean onTouch(View v, MotionEvent event) {
+                        switch(event.getAction()) {
+                            //터치 케이스
+                            case MotionEvent.ACTION_UP:
+                                ImageView CharView = (ImageView)findViewById(R.id.char_img);
+                                CharView.setImageResource(R.drawable.legs_img);
+
+                                ImageView CharChangeView = (ImageView)findViewById(R.id.char_change_img);
+                                CharChangeView.setImageResource(R.drawable.legs_change_img);
+
+                                Bitmap myBitmap = ((BitmapDrawable)CharChangeView.getDrawable()).getBitmap();
+                                Bitmap newBitmap = addGradient_silver(myBitmap);
+                                CharChangeView.setImageDrawable(new BitmapDrawable(getResources(), newBitmap));
+                        }
+                        return true;
+                    }
+
+                });
+                break;
+        }
 
         //BOT 프레임레이아웃 ID값 비교함수 추가예정
 
@@ -404,6 +611,55 @@ public class MainActivity extends AppCompatActivity{
         if(view != null) {
             frame.addView(view);
         }
+
+
     }
 
+    public Bitmap addGradient_gold(Bitmap originalBitmap) {
+        int width = originalBitmap.getWidth();
+        int height = originalBitmap.getHeight();
+
+        Bitmap updatedBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(updatedBitmap);
+        canvas.drawBitmap(originalBitmap, 0, 0, null);
+
+        Paint paint = new Paint();
+        LinearGradient shader = new LinearGradient(0, 0, 0, height, 0xFFffd700, 0xFFf0e68c, Shader.TileMode.MIRROR);
+        paint.setShader(shader);
+        paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP));
+        canvas.drawRect(0, 0, width, height, paint);
+        return updatedBitmap;
+    }
+
+    public Bitmap addGradient_copper(Bitmap originalBitmap) {
+        int width = originalBitmap.getWidth();
+        int height = originalBitmap.getHeight();
+
+        Bitmap updatedBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(updatedBitmap);
+        canvas.drawBitmap(originalBitmap, 0, 0, null);
+
+        Paint paint = new Paint();
+        LinearGradient shader = new LinearGradient(0, 0, 0, height, 0xFFB46042, 0xFFffe5c0, Shader.TileMode.MIRROR);
+        paint.setShader(shader);
+        paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP));
+        canvas.drawRect(0, 0, width, height, paint);
+        return updatedBitmap;
+    }
+
+    public Bitmap addGradient_silver(Bitmap originalBitmap) {
+        int width = originalBitmap.getWidth();
+        int height = originalBitmap.getHeight();
+
+        Bitmap updatedBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(updatedBitmap);
+        canvas.drawBitmap(originalBitmap, 0, 0, null);
+
+        Paint paint = new Paint();
+        LinearGradient shader = new LinearGradient(0, 0, 0, height, 0xFF646464, 0xFFd2d2d2, Shader.TileMode.MIRROR);
+        paint.setShader(shader);
+        paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP));
+        canvas.drawRect(0, 0, width, height, paint);
+        return updatedBitmap;
+    }
 }
