@@ -1,8 +1,11 @@
 package com.example.caucse.alonehealth;
 
 import android.annotation.TargetApi;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -56,7 +59,7 @@ public class ExerciseShotActivity extends AppCompatActivity
     private Mat mEndSample;
     int max_difference = 0;
     // 운동 진행 state
-    int progress = -1;
+    private final static int INIT = -1;
     private final static int START_EXERCISE = 0;
     private final static int START_SAMPLING = 1;
     private final static int END_SAMPLING = 2;
@@ -64,6 +67,7 @@ public class ExerciseShotActivity extends AppCompatActivity
     private final static int TOWARD_EXERCISE = 4;
     private final static int COMPLETE_EXERCISE = 5;
     private final static int REST_EXERCISE = 6;
+    int progress = INIT;
     ///////////////////////////////////
     Button startButton;
     ImageView stopImage;
@@ -81,10 +85,12 @@ public class ExerciseShotActivity extends AppCompatActivity
     //운동 카운트 플래그
     boolean isFirstPosition = true;
     boolean isLastPosition = false;
-    int exercise_count = 0;
+    int exercise_count = -1;
     int exercise_set = 0;
 
-
+    /**TTS 브로드캐스트 리시버*/
+    IntentFilter intentFilter;
+    BroadcastReceiver broadcastReceiver;
     public native void ConvertRGBtoGray(long matAddrInput, long matAddrResult);
     public native void InvertMat(long matAddrInput, long matAddrResult);
     public native int CountWhitePixels(long matAddrInput);
@@ -121,6 +127,43 @@ public class ExerciseShotActivity extends AppCompatActivity
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         setContentView(R.layout.activity_shot);
         frameBuffer = new MatCirCularQueue();
+
+        /**TTS 브로드캐스트 리시버*/
+        intentFilter = new IntentFilter();
+        intentFilter.addAction(TextToSpeech.ACTION_TTS_QUEUE_PROCESSING_COMPLETED);
+        broadcastReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String act = intent.getAction();
+                if(act.equals(TextToSpeech.ACTION_TTS_QUEUE_PROCESSING_COMPLETED)){
+                    TimerThread timerThread;
+                    switch(progress){
+                        case INIT:
+                            progress = START_EXERCISE;
+                            timerThread = new TimerThread();
+                            count = exercisePrepareInterval;
+                            timerThread.start();
+                            break;
+                        case START_EXERCISE:
+                            progress = START_SAMPLING;
+                            timerThread = new TimerThread();
+                            count = samplingInterval;
+                            timerThread.start();
+                            break;
+                        case START_SAMPLING:
+                            progress = END_SAMPLING;
+                            timerThread = new TimerThread();
+                            count = samplingInterval;
+                            timerThread.start();
+                            break;
+                    }
+                    unregisterReceiver(broadcastReceiver);
+                    Toast.makeText( ExerciseShotActivity.this , String.format("Progress : %d",progress), Toast.LENGTH_SHORT ).show();
+                }
+            }
+        };
+
+
         //운동 이름 text view
         exercisetext = (TextView) findViewById(R.id.exercisetext);
         //운동 set 수 text view
@@ -171,11 +214,7 @@ public class ExerciseShotActivity extends AppCompatActivity
                 tts.setPitch(1.0f);
                 tts.setSpeechRate(1.0f);
                 tts.speak(String.format("운동을 시작합니다. %d초 안에 자세를 취해주세요",exercisePrepareInterval), TextToSpeech.QUEUE_FLUSH, null);
-                TimerThread timerThread = new TimerThread();
-                timerThread.setDaemon(true);
-                count = exercisePrepareInterval+5;
-                timerThread.start();
-                progress = START_EXERCISE;
+                registerReceiver(broadcastReceiver,intentFilter);
             }
         });
 
@@ -199,7 +238,7 @@ public class ExerciseShotActivity extends AppCompatActivity
                                 Intent intent = new Intent(getApplicationContext(),
                                         MainActivity.class);
                                 intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                                progress = -1;
+                                progress = INIT;
                                 tts.shutdown();
                                 startActivity(intent);
 
@@ -216,25 +255,19 @@ public class ExerciseShotActivity extends AppCompatActivity
                 if(msg.what == 0){
                     switch(progress){
                         case START_EXERCISE:
-                            progress = START_SAMPLING;
                             tts.speak(String.format("표본 추출을 위해 운동 시작 자세를 취해 주세요.",samplingInterval), TextToSpeech.QUEUE_FLUSH, null);
-                            TimerThread timerThread = new TimerThread();
-                            count = samplingInterval + 1;
-                            timerThread.start();
+                            registerReceiver(broadcastReceiver,intentFilter);
                             break;
                         case START_SAMPLING:
-                            progress = END_SAMPLING;
                             tts.speak(String.format("운동 끝 자세를 취해 주세요.",samplingInterval), TextToSpeech.QUEUE_FLUSH, null);
-                            TimerThread timerThread4 = new TimerThread();
-                            count = samplingInterval + 1;
-                            timerThread4.start();
+                            registerReceiver(broadcastReceiver,intentFilter);
                             break;
                         case END_SAMPLING:
                             progress = TOWARD_SAMPLING;
                             tts.speak(String.format("표본 추출이 완료되었습니다.",samplingInterval), TextToSpeech.QUEUE_FLUSH, null);
-                            TimerThread timerThread5 = new TimerThread();
-                            count = samplingInterval + 1;
-                            timerThread5.start();
+                            TimerThread timerThread = new TimerThread();
+                            count = samplingInterval;
+                            timerThread.start();
                             break;
                         case TOWARD_SAMPLING:
                             Mat matDiff = new Mat(matGray.rows(), matGray.cols(), matGray.type());
@@ -245,7 +278,6 @@ public class ExerciseShotActivity extends AppCompatActivity
                             break;
                         case TOWARD_EXERCISE:
                             if(exercise_count >= num){
-                                exercise_set++;
                                 if(exercise_set >= set){
                                     progress = COMPLETE_EXERCISE;
                                     tts.speak(String.format("운동이 완료되었습니다. ",setInterval), TextToSpeech.QUEUE_FLUSH, null);
@@ -457,25 +489,25 @@ public class ExerciseShotActivity extends AppCompatActivity
     }
     private synchronized void counting(int differenceWithStart, int differenceWithEnd){
         if(isFirstPosition){
-            if(differenceWithEnd < max_difference / 5){
+            if(differenceWithEnd < max_difference / 10){
                 isFirstPosition = false;
                 isLastPosition = true;
             }
 
         }
         else if(isLastPosition){
-            if(differenceWithStart < max_difference / 5){
+            if(differenceWithStart < max_difference / 10){
                 exercise_count++;
                 isFirstPosition = true;
                 isLastPosition = false;
-                tts.speak(String.format("%d",exercise_count), TextToSpeech.QUEUE_FLUSH, null);
                 if(exercise_count >= num){
                     TimerThread timerThread = new TimerThread();
-                    count = 2;
+                    count = 1;
                     timerThread.start();
                 }
                 else
                     mHandler.sendEmptyMessage(0);
+                tts.speak(String.format("%d",exercise_count), TextToSpeech.QUEUE_FLUSH, null);
 
             }
         }
